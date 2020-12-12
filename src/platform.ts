@@ -58,7 +58,7 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
       {
         exampleUniqueId: 'compact-p-001',
         exampleDisplayName: 'Compact P',
-      }
+      },
     ];
 
     // loop over the discovered devices and register each one if it has not already been registered
