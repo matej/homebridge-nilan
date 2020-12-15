@@ -2,7 +2,7 @@
 
 import { read } from 'fs';
 import ModbusRTU from 'modbus-serial';
-import {OperationMode, PauseOption, Readings, Register, Settings, VentilationMode} from './cts700Data';
+import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode} from './cts700Data';
 
 export class CTS700Modbus {
 
@@ -87,6 +87,28 @@ export class CTS700Modbus {
             throw Error('Invalid operation mode value.');
           }
           return result;
+        });
+    }
+
+    private async readDateTimeRegister(register: Register): Promise<DateTime> {
+      return this.client.readHoldingRegisters(register, 4)
+        .then((result) => {
+          if (result.data.length !== 4) {
+            throw Error('Invalid result returned.');
+          }
+          const date: DateTime = {
+            seconds: (result.data[0] >> 8) & 0xFF,
+            minutes: result.data[0] & 0xFF,
+
+            hours: (result.data[1] >> 8) & 0xFF,
+            day: result.data[1] & 0xFF,
+
+            weekDay: (result.data[2] >> 8) & 0xFF,
+            month: result.data[2] & 0xFF,
+
+            year: (result.data[3] >> 8) & 0xFF,
+          };
+          return date;
         });
     }
 

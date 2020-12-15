@@ -36,7 +36,9 @@ export enum Register {
 	// 2 Heating mode.
 	// 3 Ventilation mode.
 	// 4 Hot water mode.
-	OperationMode = 5432
+	OperationMode = 5432,
+	// Current Date-Time value.
+	CurrentTime = 4722
   }
 
 export enum PauseOption {
@@ -101,3 +103,22 @@ export interface Readings {
 	// DHW tank top temperature in C times 10
 	dhwTankTopTemperature: number;
 }
+
+// Nilan date / time entry
+export interface DateTime {
+	// Seconds (0 ÷ 59)
+	seconds: number;
+	// Minutes (0 ÷ 59)
+	minutes: number;
+	// Hours (0 ÷ 23)
+	hours: number;
+	// Day (1 ÷ 31)
+	day: number;
+	// Day of week (1 ÷ 7)
+	weekDay: number;
+	// Month (1 ÷ 12)
+	month: number;
+	// Year (0 ÷ 38)
+	year: number;
+}
+
