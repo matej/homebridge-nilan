@@ -20,7 +20,7 @@ export class CTS700Modbus {
 
     async fetchReadings(): Promise<Readings> {
       const readings: Readings = {
-        roomTemperature: await this.readTemperatureRegister(Register.T3ExtractAirTemperature),
+        roomTemperature: await this.readTemperatureRegister(Register.MasterSensorTemperature),
         outdoorTemperature: await this.readTemperatureRegister(Register.OutdoorTemperature),
         actualHumidity: await this.readPercentageRegister(Register.ActualHumidity),
         dhwTankTopTemperature: await this.readTemperatureRegister(Register.DHWTopTankTemperature),

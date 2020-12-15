@@ -10,24 +10,11 @@ export enum Register {
 	// DesiredRoomTemperature is ID of register holding desired room temperature in C times 10.
 	// Example: 23.5 C is stored as 235.
 	DesiredRoomTemperature = 4746,
-	// MasterTemperatureSensorSetting is ID of register holding:
-	// 0 (read temperature from T3 - Extracted air)
-	// 1 (read temperature from T7 - Intake air (after heating element))
-	// 2 (read temperature from TPANEL - CTS 700 control panel)
-	// 3 (read temperature from T18 - Buffer tank, flow)
-	MasterTemperatureSensorSetting = 2793,
-	// T3ExtractAirTemperature is ID of register holding room temperature value when
-	// MasterTemperatureSensorSetting is 0
-	T3ExtractAirTemperature = 5154,
-	// T7IntakeAirTemperature is ID of register holding room temperature value when
-	// MasterTemperatureSensorSetting is 1
-	T7IntakeAirTemperature = 5158,
-	// PanelTemperature is ID of register holding room temperature value when
-	// MasterTemperatureSensorSetting is 2
+	// MasterSensorTemperature is ID of register holding the temperature that 
+	// is used for regulation.
+	MasterSensorTemperature = 5088,
+	// Temperature at the CTS700 panel
 	PanelTemperature = 4713,
-	// T18BufferTankTemperature is ID of register holding room temperature value when
-	// MasterTemperatureSensorSetting is 3
-	T18BufferTankTemperature = 5229,
 	// OutdoorTemperature is ID of register outdoor temperature
 	OutdoorTemperature = 5152,
 	// ActualHumidity is ID of register holding actual humidity value
