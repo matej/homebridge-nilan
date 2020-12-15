@@ -10,6 +10,7 @@ export class CompactPPlatformAccessory {
   private ventilationThermostatService: Service;
   private dhwThermostatService: Service;
   private outsideTemperatureSensorService: Service;
+  private panelTemperatureSensorService: Service;
   
   private cts700Modbus: CTS700Modbus;
 
@@ -30,6 +31,7 @@ export class CompactPPlatformAccessory {
     this.ventilationThermostatService = this.setUpVentilationThermostat(platform, accessory);
     this.dhwThermostatService = this.setUpDHWThermostat(platform, accessory);
     this.outsideTemperatureSensorService = this.setUpOutsideTemperatureSensor(platform, accessory);
+    this.panelTemperatureSensorService = this.setUpPanelTemperatureSensor(platform, accessory);
 
     setInterval(() => {
       this.updateFromDevice(platform);
@@ -107,6 +109,21 @@ export class CompactPPlatformAccessory {
     return outsideTemperatureSensorService;
   }
 
+  private setUpPanelTemperatureSensor(platform: NilanHomebridgePlatform, accessory: PlatformAccessory): Service {
+    // Panel temperature sensor service
+    // see https://developers.homebridge.io/#/service/TemperatureSensor
+    const panelTemperatureSensorService = this.accessory.getServiceById(platform.Service.TemperatureSensor, 'compact-p-panel-temp') || 
+      accessory.addService(platform.Service.TemperatureSensor, 'Panel', 'compact-p-panel-temp');
+    
+    const c = platform.Characteristic;
+    panelTemperatureSensorService.getCharacteristic(c.CurrentTemperature).setProps({
+      minValue: -40,
+      maxValue: 160,
+    });
+
+    return panelTemperatureSensorService;
+  }
+
   private async updateFromDevice(platform: NilanHomebridgePlatform) {
     try {
       const readings = await this.cts700Modbus.fetchReadings();
@@ -116,6 +133,7 @@ export class CompactPPlatformAccessory {
 
       this.ventilationThermostatService.updateCharacteristic(c.CurrentTemperature, readings.roomTemperature);
       this.outsideTemperatureSensorService.updateCharacteristic(c.CurrentTemperature, readings.outdoorTemperature);
+      this.panelTemperatureSensorService.updateCharacteristic(c.CurrentTemperature, readings.panelTemperature);
       this.ventilationThermostatService.updateCharacteristic(c.CurrentRelativeHumidity, readings.actualHumidity);
       this.dhwThermostatService.updateCharacteristic(c.CurrentTemperature, readings.dhwTankTopTemperature);
 

@@ -22,6 +22,7 @@ export class CTS700Modbus {
       const readings: Readings = {
         roomTemperature: await this.readTemperatureRegister(Register.MasterSensorTemperature),
         outdoorTemperature: await this.readTemperatureRegister(Register.OutdoorTemperature),
+        panelTemperature: await this.readTemperatureRegister(Register.PanelTemperature),
         actualHumidity: await this.readPercentageRegister(Register.ActualHumidity),
         dhwTankTopTemperature: await this.readTemperatureRegister(Register.DHWTopTankTemperature),
       };  

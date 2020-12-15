@@ -100,6 +100,8 @@ export interface Readings {
 	roomTemperature: number;
 	// Outdoor temperature in C times 10
 	outdoorTemperature: number;
+	// Panel temperature in C times 10
+	panelTemperature: number;
 	// Actual humidity of air (0-100%)
 	actualHumidity: number;
 	// DHW tank top temperature in C times 10
