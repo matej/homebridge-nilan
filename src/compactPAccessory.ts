@@ -32,8 +32,7 @@ export class CompactPPlatformAccessory {
     this.outsideTemperatureSensorService = this.setUpOutsideTemperatureSensor(platform, accessory);
 
     setInterval(() => {
-      this.updateReadings(platform);
-      this.updateSettings(platform);
+      this.updateFromDevice(platform);
     }, 10000);
   }
 
@@ -108,7 +107,7 @@ export class CompactPPlatformAccessory {
     return outsideTemperatureSensorService;
   }
 
-  private async updateReadings(platform: NilanHomebridgePlatform) {
+  private async updateFromDevice(platform: NilanHomebridgePlatform) {
     try {
       const readings = await this.cts700Modbus.fetchReadings();
       this.platform.log.debug('Updating with readings:', readings);
@@ -119,17 +118,9 @@ export class CompactPPlatformAccessory {
       this.outsideTemperatureSensorService.updateCharacteristic(c.CurrentTemperature, readings.outdoorTemperature);
       this.ventilationThermostatService.updateCharacteristic(c.CurrentRelativeHumidity, readings.actualHumidity);
       this.dhwThermostatService.updateCharacteristic(c.CurrentTemperature, readings.dhwTankTopTemperature);
-    } catch (e) {
-      this.platform.log.error('Could not update readings.', e.message);
-    }
-  }
 
-  private async updateSettings(platform: NilanHomebridgePlatform) {
-    try {
       const settings = await this.cts700Modbus.fetchSettings();
       this.platform.log.debug('Updating with settings:', settings);
-      
-      const c = platform.Characteristic;
 
       if (settings.paused === PauseOption.Ventilation || settings.paused === PauseOption.All) {
         this.ventilationThermostatService.updateCharacteristic(c.CurrentHeatingCoolingState, c.CurrentHeatingCoolingState.OFF);
