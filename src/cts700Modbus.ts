@@ -43,7 +43,9 @@ export class CTS700Modbus {
     private async readTemperatureRegister(register: Register): Promise<number> {
       return this.readSingleRegister(register)
         .then((result) => {
-          return result / 10;
+          // int16 conversion to account for negative values
+          const signed = (result << 16) >> 16;
+          return signed / 10;
         });
     }
 
