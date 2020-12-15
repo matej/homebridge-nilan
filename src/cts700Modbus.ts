@@ -36,6 +36,9 @@ export class CTS700Modbus {
         desiredDHWTemperature: await this.readTemperatureRegister(Register.DHWSetPoint),
         ventilationMode: await this.readVentilationModeRegister(Register.VentilationMode),
         operationMode: await this.readOperationModeRegister(Register.OperationMode),
+        condenserTemperature: await this.readTemperatureRegister(Register.T5CondenserTemperature),
+        evaporatorTemperature: await this.readTemperatureRegister(Register.T6EvaporatorTemperature),
+        waterHeatingCoilTemperature: await this.readTemperatureRegister(Register.T9WaterHeatingCoilTemperature),
       };  
       return settings;
     }
