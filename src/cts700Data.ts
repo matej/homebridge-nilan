@@ -15,9 +15,6 @@ export enum Register {
 	MasterSensorTemperature = 5088,
 	// Temperature at the CTS700 panel
 	PanelTemperature = 4713,
-	T5CondenserTemperature = 5156,
-	T6EvaporatorTemperature = 5157,
-	T9WaterHeatingCoilTemperature = 5160,
 	// OutdoorTemperature is ID of register outdoor temperature
 	OutdoorTemperature = 5152,
 	// ActualHumidity is ID of register holding actual humidity value
@@ -89,9 +86,6 @@ export interface Settings {
 	ventilationMode: VentilationMode;
 	// The current operation mode of the unit.
 	operationMode: OperationMode;
-	condenserTemperature: number;
-	evaporatorTemperature: number;
-	waterHeatingCoilTemperature: number;
 }
 
 // Readings from Nilan sensors
