@@ -2,7 +2,7 @@
 
 import { read } from 'fs';
 import ModbusRTU from 'modbus-serial';
-import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode} from './cts700Data';
+import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
 
 export class CTS700Modbus {
 
@@ -107,6 +107,41 @@ export class CTS700Modbus {
             year: result.buffer.readInt8(6),
           };
           return date;
+        });
+    }
+
+    private async readWeekProgramRegister(register: Register): Promise<Array<WeekScheduleRecord>> {
+      const programCount = 14;
+      const bytesPerProgram = 10;
+      const totalBytes = programCount * bytesPerProgram;
+      // 2 bytes per register
+      const registerCount = totalBytes / 2;
+      return this.client.readHoldingRegisters(register, registerCount)
+        .then((result) => {
+          if (result.data.length !== registerCount) {
+            throw Error('Invalid result returned.');
+          }
+          const schedule = Array<WeekScheduleRecord>();
+          let byte = 0;
+          while(byte < totalBytes) {
+            const weekDay = result.buffer.readInt8(byte);
+            // Week day 0 indicates an unused entry.
+            if (weekDay === 0) {
+              break;
+            }
+            const record: WeekScheduleRecord = {
+              weekDay: result.buffer.readInt8(byte),
+              hour: result.buffer.readInt8(byte + 1),
+              minute: result.buffer.readInt8(byte + 2),
+              temperature: result.buffer.readInt16BE(byte + 3),
+              dhwTemperature: result.buffer.readInt16BE(byte + 5),
+              flags: result.buffer.readInt8(byte + 7),
+              fanSpeed: result.buffer.readInt16BE(byte + 8),
+            };
+            schedule.push(record);
+            byte += bytesPerProgram;
+          }
+          return schedule;
         });
     }
 

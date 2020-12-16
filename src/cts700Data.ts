@@ -38,7 +38,9 @@ export enum Register {
 	// 4 Hot water mode.
 	OperationMode = 5432,
 	// Current Date-Time value.
-	CurrentTime = 4722
+	CurrentTime = 4722,
+	// First 14 program records of Week Program.(
+	FistWeekProgram = 573
   }
 
 export enum PauseOption {
@@ -120,5 +122,23 @@ export interface DateTime {
 	month: number;
 	// Year (0 ÷ 38)
 	year: number;
+}
+
+// Nilan date / time entry
+export interface WeekScheduleRecord {
+	// Day of week (1 ÷ 7)
+	weekDay: number;
+	// Hours (0 ÷ 23)
+	hour: number;
+	// Minutes (0 ÷ 59)
+	minute: number;
+	// 50 ÷ 500 (5ºC ÷ 50ºC)
+	temperature: number;
+	// 100 ÷ 600 (10ºC ÷ 60ºC)
+	dhwTemperature: number;
+	// Flag bitmask
+	flags: number;
+	// 0 ÷ 100 (%)
+	fanSpeed: number;
 }
 
