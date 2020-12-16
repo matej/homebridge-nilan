@@ -98,13 +98,13 @@ export class CTS700Modbus {
             throw Error('Invalid result returned.');
           }
           const date: DateTime = {
-            seconds: result.buffer[0],
-            minutes: result.buffer[1],
-            hours: result.buffer[2],
-            day: result.buffer[3],
-            weekDay: result.buffer[4],
-            month: result.buffer[5],
-            year: result.buffer[6],
+            second: result.buffer.readInt8(0),
+            minute: result.buffer.readInt8(1),
+            hour: result.buffer.readInt8(2),
+            day: result.buffer.readInt8(3),
+            weekDay: result.buffer.readInt8(4),
+            month: result.buffer.readInt8(5),
+            year: result.buffer.readInt8(6),
           };
           return date;
         });

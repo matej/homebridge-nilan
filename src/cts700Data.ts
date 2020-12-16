@@ -107,11 +107,11 @@ export interface Readings {
 // Nilan date / time entry
 export interface DateTime {
 	// Seconds (0 ÷ 59)
-	seconds: number;
+	second: number;
 	// Minutes (0 ÷ 59)
-	minutes: number;
+	minute: number;
 	// Hours (0 ÷ 23)
-	hours: number;
+	hour: number;
 	// Day (1 ÷ 31)
 	day: number;
 	// Day of week (1 ÷ 7)
