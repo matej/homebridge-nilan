@@ -91,22 +91,20 @@ export class CTS700Modbus {
     }
 
     private async readDateTimeRegister(register: Register): Promise<DateTime> {
-      return this.client.readHoldingRegisters(register, 4)
+      const registerCount = 4;
+      return this.client.readHoldingRegisters(register, registerCount)
         .then((result) => {
-          if (result.data.length !== 4) {
+          if (result.data.length !== registerCount) {
             throw Error('Invalid result returned.');
           }
           const date: DateTime = {
-            seconds: (result.data[0] >> 8) & 0xFF,
-            minutes: result.data[0] & 0xFF,
-
-            hours: (result.data[1] >> 8) & 0xFF,
-            day: result.data[1] & 0xFF,
-
-            weekDay: (result.data[2] >> 8) & 0xFF,
-            month: result.data[2] & 0xFF,
-
-            year: (result.data[3] >> 8) & 0xFF,
+            seconds: result.buffer[0],
+            minutes: result.buffer[1],
+            hours: result.buffer[2],
+            day: result.buffer[3],
+            weekDay: result.buffer[4],
+            month: result.buffer[5],
+            year: result.buffer[6],
           };
           return date;
         });
