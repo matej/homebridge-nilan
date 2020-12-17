@@ -39,7 +39,7 @@ export enum Register {
 	OperationMode = 5432,
 	// Current Date-Time value.
 	CurrentTime = 4722,
-	// First 14 program records of Week Program.(
+	// First 14 program records of Week Program.
 	FistWeekProgram = 573
   }
 
@@ -104,6 +104,8 @@ export interface Readings {
 	actualHumidity: number;
 	// DHW tank top temperature in C times 10
 	dhwTankTopTemperature: number;
+	// Currently active schedule.
+	activeSchedule?: WeekScheduleRecord;
 }
 
 // Nilan date / time entry

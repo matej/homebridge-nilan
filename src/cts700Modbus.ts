@@ -25,7 +25,15 @@ export class CTS700Modbus {
         panelTemperature: await this.readTemperatureRegister(Register.PanelTemperature),
         actualHumidity: await this.readPercentageRegister(Register.ActualHumidity),
         dhwTankTopTemperature: await this.readTemperatureRegister(Register.DHWTopTankTemperature),
-      };  
+      };
+      
+      const time = await this.readDateTimeRegister(Register.CurrentTime);
+      const week = await this.readWeekProgramRegister(Register.FistWeekProgram, 14);
+
+      if (week.length > 0) {
+        readings.activeSchedule = this.findCurrentActiveWeekRecord(week, time);
+      }
+
       return readings;
     }
 
@@ -110,8 +118,7 @@ export class CTS700Modbus {
         });
     }
 
-    private async readWeekProgramRegister(register: Register): Promise<Array<WeekScheduleRecord>> {
-      const programCount = 14;
+    private async readWeekProgramRegister(register: Register, programCount: number): Promise<Array<WeekScheduleRecord>> {
       const bytesPerProgram = 10;
       const totalBytes = programCount * bytesPerProgram;
       // 2 bytes per register
@@ -153,5 +160,42 @@ export class CTS700Modbus {
           }
           return result.data[0];
         });
+    }
+
+    private findCurrentActiveWeekRecord(records: Array<WeekScheduleRecord>, time: DateTime): WeekScheduleRecord {
+      // We create a fake schedule record based on the current time.
+      // After sorting we just take the preceding entry as the currently
+      // active schedule record.
+      const fakeRecord: WeekScheduleRecord = {
+        weekDay: time.weekDay,
+        hour: time.hour,
+        minute: time.minute,
+        temperature: Number.MAX_SAFE_INTEGER,
+        dhwTemperature: Number.MAX_SAFE_INTEGER,
+        flags: Number.MAX_SAFE_INTEGER,
+        fanSpeed: Number.MAX_SAFE_INTEGER,
+      };
+
+      records.push(fakeRecord);
+
+      records.sort(
+        (a, b) => {          
+          if (a.weekDay === b.weekDay) {
+            if (a.hour === b.hour) {
+              if (a.minute === b.minute) {
+                return a.temperature > b.temperature ? 1 : -1;
+              }
+              return a.minute > b.minute ? 1 : -1;
+            }
+            return a.hour > b.hour ? 1 : -1;
+          }
+          return a.weekDay > b.weekDay ? 1 : -1;
+        });
+      
+      const index = records.indexOf(fakeRecord);
+      if (index === 0) {
+        return records[records.length - 1];
+      }
+      return records[index - 1];
     }
 }
