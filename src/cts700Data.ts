@@ -9,7 +9,7 @@ export enum Register {
 	FanSpeed = 4747,
 	// DesiredRoomTemperature is ID of register holding desired room temperature in C times 10.
 	// Example: 23.5 C is stored as 235.
-	DesiredRoomTemperature = 4746,
+	RoomTemperatureSetPoint = 4746,
 	// MasterSensorTemperature is ID of register holding the temperature that 
 	// is used for regulation.
 	MasterSensorTemperature = 5088,
@@ -24,7 +24,7 @@ export enum Register {
 	// DHWBottomTankTemperature is ID of register holding T12 bottom DHW tank temperature
 	DHWBottomTankTemperature = 5163,
 	// DHWSetPoint is ID of register holding desired DHW temperature
-	DHWSetPoint = 5548,
+	DHWTemperatureSetPoint = 5548,
 	// Forced operation mode.
 	// 0 (Auto)
 	// 1 (Cooling)
@@ -83,9 +83,9 @@ export interface Settings {
 	// Fan speed of ventilation (20-100)
 	fanSpeed: number;
 	// Desired room temperature in C (5-40) times 10
-	desiredRoomTemperature: number;
+	roomTemperatureSetPoint: number;
 	// Desired DHW temperature in C (10-60) times 10
-	desiredDHWTemperature: number;
+	dhwTemperatureSetPoint: number;
 	// Ventilation mode indicates automatic or forced aur conditioning operation
 	ventilationMode: VentilationMode;
 	// The current operation mode of the unit.

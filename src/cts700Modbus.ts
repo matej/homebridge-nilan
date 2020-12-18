@@ -2,6 +2,7 @@
 
 import { read } from 'fs';
 import ModbusRTU from 'modbus-serial';
+import { WriteRegisterResult } from 'modbus-serial/ModbusRTU';
 import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
 
 export class CTS700Modbus {
@@ -41,8 +42,8 @@ export class CTS700Modbus {
       const settings: Settings = {
         paused: await this.readPauseRegister(Register.Pause),
         fanSpeed: await this.readPercentageRegister(Register.FanSpeed),
-        desiredRoomTemperature: await this.readTemperatureRegister(Register.DesiredRoomTemperature),
-        desiredDHWTemperature: await this.readTemperatureRegister(Register.DHWSetPoint),
+        roomTemperatureSetPoint: await this.readTemperatureRegister(Register.RoomTemperatureSetPoint),
+        dhwTemperatureSetPoint: await this.readTemperatureRegister(Register.DHWTemperatureSetPoint),
         ventilationMode: await this.readVentilationModeRegister(Register.VentilationMode),
         operationMode: await this.readOperationModeRegister(Register.OperationMode),
       };  
@@ -62,7 +63,7 @@ export class CTS700Modbus {
       return this.readSingleRegister(register)
         .then((result) => {
           if (result < 0 || result > 100) {
-            throw Error('Invalid value.');
+            throw Error('Value outside of acceptable range.');
           }
           return result;
         });
@@ -140,8 +141,8 @@ export class CTS700Modbus {
               weekDay: result.buffer.readInt8(byte),
               hour: result.buffer.readInt8(byte + 1),
               minute: result.buffer.readInt8(byte + 2),
-              temperature: result.buffer.readInt16BE(byte + 3),
-              dhwTemperature: result.buffer.readInt16BE(byte + 5),
+              temperature: result.buffer.readInt16BE(byte + 3) / 10,
+              dhwTemperature: result.buffer.readInt16BE(byte + 5) / 10,
               flags: result.buffer.readInt8(byte + 7),
               fanSpeed: result.buffer.readInt16BE(byte + 8),
             };
@@ -159,6 +160,47 @@ export class CTS700Modbus {
             throw Error('No result returned.');
           }
           return result.data[0];
+        });
+    }
+
+    public async writeFanSpeed(value: number) {
+      this.writePercentageRegister(Register.FanSpeed, value);
+    }
+
+    public async writeRoomTemperatureSetPoint(value: number) {
+      if (value < 5 || value > 50) {
+        throw Error('Value outside of acceptable range.');
+      }
+      this.writeTemperatureRegister(Register.RoomTemperatureSetPoint, value);
+    }
+
+    public async writeDHWSetPoint(value: number) {
+      if (value < 5 || value > 65) {
+        throw Error('Value outside of acceptable range.');
+      }
+      this.writeTemperatureRegister(Register.DHWTemperatureSetPoint, value);
+    }
+
+    private async writePercentageRegister(register: Register, value: number) {
+      if (value < 0 || value > 100) {
+        throw Error('Value outside of acceptable range.');
+      }
+      const modbusValue = Math.floor(value);
+      this.writeSingleRegister(register, modbusValue);
+    }
+
+    private async writeTemperatureRegister(register: Register, value: number) {
+      // Convert to modbus format (adjust negative values and get rid of floating point precision)
+      const modbusValue = Math.floor(value < 0 ? (value * 10) + 65535 : (value * 10));
+      this.writeSingleRegister(register, modbusValue);
+    }
+
+    private async writeSingleRegister(register: Register, value: number) {
+      return this.client.writeRegister(register, value)
+        .then((result) => {
+          if (result.value !== value) {
+            throw Error('Setting value failed.');
+          }
         });
     }
 

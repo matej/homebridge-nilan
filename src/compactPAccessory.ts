@@ -1,8 +1,8 @@
-import { read } from 'fs';
 import { Service, PlatformAccessory } from 'homebridge';
-import { OperationMode, PauseOption, VentilationMode } from './cts700Data';
-import { CTS700Modbus } from './cts700Modbus';
+import deepEqual from 'deep-equal';
 
+import { OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
+import { CTS700Modbus } from './cts700Modbus';
 import { NilanHomebridgePlatform } from './platform';
 
 export class CompactPPlatformAccessory {
@@ -13,6 +13,8 @@ export class CompactPPlatformAccessory {
   private panelTemperatureSensorService: Service;
   
   private cts700Modbus: CTS700Modbus;
+
+  private processedSchedule?: WeekScheduleRecord;
 
   constructor(
     private readonly platform: NilanHomebridgePlatform,
@@ -137,6 +139,21 @@ export class CompactPPlatformAccessory {
       this.ventilationThermostatService.updateCharacteristic(c.CurrentRelativeHumidity, readings.actualHumidity);
       this.dhwThermostatService.updateCharacteristic(c.CurrentTemperature, readings.dhwTankTopTemperature);
 
+      // Set before fetching settings!
+      if (readings.activeSchedule && !deepEqual(readings.activeSchedule, this.processedSchedule)) {
+        this.platform.log.debug('Updating fan temperature, dhw temperature and fan speed to match schedule.',
+          readings.activeSchedule.temperature,
+          readings.activeSchedule.dhwTemperature,
+          readings.activeSchedule.fanSpeed);
+
+        this.cts700Modbus.writeRoomTemperatureSetPoint(readings.activeSchedule.temperature);
+        this.cts700Modbus.writeDHWSetPoint(readings.activeSchedule.dhwTemperature);
+        this.cts700Modbus.writeFanSpeed(readings.activeSchedule.fanSpeed);
+
+        this.processedSchedule = readings.activeSchedule;
+      }
+      
+
       const settings = await this.cts700Modbus.fetchSettings();
       this.platform.log.debug('Updating with settings:', settings);
 
@@ -181,10 +198,11 @@ export class CompactPPlatformAccessory {
       }
 
       this.ventilationFanService.updateCharacteristic(c.RotationSpeed, settings.fanSpeed);
-      this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, settings.desiredRoomTemperature);
-      this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, settings.desiredDHWTemperature);
+      this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, settings.roomTemperatureSetPoint);
+      this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, settings.dhwTemperatureSetPoint);
     } catch (e) {
-      this.platform.log.error('Could not update readings.', e.message);
+      // TODO: split up error handling, if appropriate.
+      this.platform.log.error('Could not update readings and settings.', e.message);
     }
   }
 }
