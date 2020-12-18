@@ -191,15 +191,16 @@ export class CompactPPlatformAccessory {
           readings.activeSchedule.dhwTemperature,
           readings.activeSchedule.fanSpeed);
 
-        // TODO: This is failing!
+        // TODO: This is failing!?
         await this.cts700Modbus.writeRoomTemperatureSetPoint(readings.activeSchedule.temperature);
         await this.cts700Modbus.writeDHWSetPoint(readings.activeSchedule.dhwTemperature);
         await this.cts700Modbus.writeFanSpeed(readings.activeSchedule.fanSpeed);
 
+        this.platform.log.debug('Updated fan temperature, dhw temperature and fan speed to match schedule.');
+
         this.processedSchedule = readings.activeSchedule;
       }
       
-
       const settings = await this.cts700Modbus.fetchSettings();
       this.platform.log.debug('Updating with settings:', settings);
 

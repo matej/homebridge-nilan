@@ -164,43 +164,44 @@ export class CTS700Modbus {
     }
 
     public async writeFanSpeed(value: number) {
-      this.writePercentageRegister(Register.FanSpeed, value);
+      return this.writePercentageRegister(Register.FanSpeed, value);
     }
 
     public async writeRoomTemperatureSetPoint(value: number) {
       if (value < 5 || value > 50) {
         throw Error('Value outside of acceptable range.');
       }
-      this.writeTemperatureRegister(Register.RoomTemperatureSetPoint, value);
+      return this.writeTemperatureRegister(Register.RoomTemperatureSetPoint, value);
     }
 
     public async writeDHWSetPoint(value: number) {
       if (value < 5 || value > 65) {
         throw Error('Value outside of acceptable range.');
       }
-      this.writeTemperatureRegister(Register.DHWTemperatureSetPoint, value);
+      return this.writeTemperatureRegister(Register.DHWTemperatureSetPoint, value);
     }
 
-    private async writePercentageRegister(register: Register, value: number) {
+    private async writePercentageRegister(register: Register, value: number): Promise<WriteRegisterResult> {
       if (value < 0 || value > 100) {
         throw Error('Value outside of acceptable range.');
       }
       const modbusValue = Math.floor(value);
-      this.writeSingleRegister(register, modbusValue);
+      return this.writeSingleRegister(register, modbusValue);
     }
 
-    private async writeTemperatureRegister(register: Register, value: number) {
+    private async writeTemperatureRegister(register: Register, value: number): Promise<WriteRegisterResult> {
       // Convert to modbus format (adjust negative values and get rid of floating point precision)
       const modbusValue = Math.floor(value < 0 ? (value * 10) + 65535 : (value * 10));
-      this.writeSingleRegister(register, modbusValue);
+      return this.writeSingleRegister(register, modbusValue);
     }
 
-    private async writeSingleRegister(register: Register, value: number) {
+    private async writeSingleRegister(register: Register, value: number): Promise<WriteRegisterResult> {
       return this.client.writeRegister(register, value)
         .then((result) => {
           if (result.value !== value) {
             throw Error('Setting value failed.');
           }
+          return result;
         });
     }
 
