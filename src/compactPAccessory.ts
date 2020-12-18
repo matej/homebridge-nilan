@@ -1,4 +1,4 @@
-import { Service, PlatformAccessory } from 'homebridge';
+import { Service, PlatformAccessory, CharacteristicEventTypes, CharacteristicValue, CharacteristicSetCallback } from 'homebridge';
 import deepEqual from 'deep-equal';
 
 import { OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
@@ -53,6 +53,21 @@ export class CompactPPlatformAccessory {
       minStep: 5,
     });
 
+    ventilationFanService.getCharacteristic(c.RotationSpeed)
+      .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        const speed = value as number;
+        this.platform.log.debug('Updating rotation speed to:', speed);
+        this.cts700Modbus.writeFanSpeed(speed)
+          .then(() => {
+            this.platform.log.debug('Rotation speed update ok:', speed);
+            callback(null);
+          })
+          .catch((error) => {
+            this.platform.log.debug('Rotation speed update failed:', error.message);
+            callback(error);
+          });
+      });
+
     return ventilationFanService;
   }
 
@@ -69,6 +84,21 @@ export class CompactPPlatformAccessory {
       maxValue: 50,
       minStep: 0.5,
     });
+
+    ventilationThermostatService.getCharacteristic(c.TargetTemperature)
+      .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        const roomTemperature = value as number;
+        this.platform.log.debug('Updating room temperature to:', roomTemperature);
+        this.cts700Modbus.writeRoomTemperatureSetPoint(roomTemperature)
+          .then(() => {
+            this.platform.log.debug('Room temperature update ok:', roomTemperature);
+            callback(null);
+          })
+          .catch((error) => {
+            this.platform.log.debug('Room temperature update failed:', error.message);
+            callback(error);
+          });
+      });
 
     return ventilationThermostatService;
   }
@@ -92,6 +122,21 @@ export class CompactPPlatformAccessory {
       maxValue: 65,
       minStep: 1,
     });
+
+    dhwThermostatService.getCharacteristic(c.TargetTemperature)
+      .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        const dhwTemperature = value as number;
+        this.platform.log.debug('Updating DHW temperature to:', dhwTemperature);
+        this.cts700Modbus.writeDHWSetPoint(dhwTemperature)
+          .then(() => {
+            this.platform.log.debug('DHW temperature update ok:', dhwTemperature);
+            callback(null);
+          })
+          .catch((error) => {
+            this.platform.log.debug('DHW temperature update failed:', error.message);
+            callback(error);
+          });
+      });
 
     return dhwThermostatService;
   }
