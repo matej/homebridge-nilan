@@ -146,9 +146,10 @@ export class CompactPPlatformAccessory {
           readings.activeSchedule.dhwTemperature,
           readings.activeSchedule.fanSpeed);
 
-        this.cts700Modbus.writeRoomTemperatureSetPoint(readings.activeSchedule.temperature);
-        this.cts700Modbus.writeDHWSetPoint(readings.activeSchedule.dhwTemperature);
-        this.cts700Modbus.writeFanSpeed(readings.activeSchedule.fanSpeed);
+        // TODO: This is failing!
+        await this.cts700Modbus.writeRoomTemperatureSetPoint(readings.activeSchedule.temperature);
+        await this.cts700Modbus.writeDHWSetPoint(readings.activeSchedule.dhwTemperature);
+        await this.cts700Modbus.writeFanSpeed(readings.activeSchedule.fanSpeed);
 
         this.processedSchedule = readings.activeSchedule;
       }
