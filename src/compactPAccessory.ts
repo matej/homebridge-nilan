@@ -2,7 +2,7 @@ import { Service, PlatformAccessory, CharacteristicEventTypes, CharacteristicVal
 import deepEqual from 'deep-equal';
 
 import { OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
-import { CTS700Modbus, NumericWriter } from './cts700Modbus';
+import { CTS700Modbus, NumericWriter, WriterParameterTypes } from './cts700Modbus';
 import { NilanHomebridgePlatform } from './platform';
 
 export class CompactPPlatformAccessory {
@@ -56,6 +56,12 @@ export class CompactPPlatformAccessory {
     ventilationFanService.getCharacteristic(c.RotationSpeed)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         this.handleWrite(CTS700Modbus.prototype.writeFanSpeed, value as number, 'Rotation speed', callback);
+      });
+
+    ventilationFanService.getCharacteristic(c.Active)
+      .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        const pauseOption = value === c.Active.INACTIVE ? PauseOption.Ventilation : PauseOption.Disabled;
+        this.handleWrite(CTS700Modbus.prototype.writePauseOption, pauseOption, 'Pause option', callback);
       });
 
     return ventilationFanService;
@@ -217,13 +223,12 @@ export class CompactPPlatformAccessory {
       this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, settings.roomTemperatureSetPoint);
       this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, settings.dhwTemperatureSetPoint);
     } catch (e) {
-      // TODO: split up error handling, if appropriate.
       this.platform.log.error('Could not update readings and settings.', e.message);
     }
   }
 
-  private async handleWrite(writer: NumericWriter, value: number, name: string, callback: CharacteristicSetCallback): 
-    Promise<number | null> {
+  private async handleWrite(writer: NumericWriter, value: WriterParameterTypes, name: string, callback: CharacteristicSetCallback): 
+    Promise<WriterParameterTypes | null> {
       
     this.platform.log.debug(name, 'updating to to:', value);
 

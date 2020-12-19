@@ -2,7 +2,8 @@ import ModbusRTU from 'modbus-serial';
 import { WriteRegisterResult } from 'modbus-serial/ModbusRTU';
 import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
 
-export declare type NumericWriter = (value: number) => Promise<number>;
+export declare type WriterParameterTypes = number | PauseOption | OperationMode;
+export declare type NumericWriter = (value: WriterParameterTypes) => Promise<WriterParameterTypes>;
 
 export class CTS700Modbus {
 
@@ -178,6 +179,20 @@ export class CTS700Modbus {
         throw Error('Value outside of acceptable range.');
       }
       return this.writeTemperatureRegister(Register.DHWTemperatureSetPoint, value);
+    }
+
+    public async writePauseOption(value: PauseOption): Promise<PauseOption> {
+      if (value < PauseOption.Disabled || value > PauseOption.All) {
+        throw Error('Invalid pause option value.');
+      }
+      return this.writeSingleRegister(Register.Pause, value);
+    }
+
+    public async writeVentilationMode(value: VentilationMode): Promise<VentilationMode> {
+      if (value < VentilationMode.Auto || value > VentilationMode.Heating) {
+        throw Error('Invalid ventilation mode value.');
+      }
+      return this.writeSingleRegister(Register.VentilationMode, value);
     }
 
     private async writePercentageRegister(register: Register, value: number): Promise<number> {
