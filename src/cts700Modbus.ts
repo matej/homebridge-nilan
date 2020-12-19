@@ -1,6 +1,3 @@
-//const ModbusRTU = require('modbus-serial');
-
-import { read } from 'fs';
 import ModbusRTU from 'modbus-serial';
 import { WriteRegisterResult } from 'modbus-serial/ModbusRTU';
 import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
