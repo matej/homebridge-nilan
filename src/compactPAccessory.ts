@@ -2,7 +2,7 @@ import { Service, PlatformAccessory, CharacteristicEventTypes, CharacteristicVal
 import deepEqual from 'deep-equal';
 
 import { OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
-import { CTS700Modbus } from './cts700Modbus';
+import { CTS700Modbus, NumericWriter } from './cts700Modbus';
 import { NilanHomebridgePlatform } from './platform';
 
 export class CompactPPlatformAccessory {
@@ -55,17 +55,7 @@ export class CompactPPlatformAccessory {
 
     ventilationFanService.getCharacteristic(c.RotationSpeed)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        const speed = value as number;
-        this.platform.log.debug('Updating rotation speed to:', speed);
-        this.cts700Modbus.writeFanSpeed(speed)
-          .then(() => {
-            this.platform.log.debug('Rotation speed update ok:', speed);
-            callback(null);
-          })
-          .catch((error) => {
-            this.platform.log.debug('Rotation speed update failed:', error.message);
-            callback(error);
-          });
+        this.handleWrite(CTS700Modbus.prototype.writeFanSpeed, value as number, 'Rotation speed', callback);
       });
 
     return ventilationFanService;
@@ -87,17 +77,7 @@ export class CompactPPlatformAccessory {
 
     ventilationThermostatService.getCharacteristic(c.TargetTemperature)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        const roomTemperature = value as number;
-        this.platform.log.debug('Updating room temperature to:', roomTemperature);
-        this.cts700Modbus.writeRoomTemperatureSetPoint(roomTemperature)
-          .then(() => {
-            this.platform.log.debug('Room temperature update ok:', roomTemperature);
-            callback(null);
-          })
-          .catch((error) => {
-            this.platform.log.debug('Room temperature update failed:', error.message);
-            callback(error);
-          });
+        this.handleWrite(CTS700Modbus.prototype.writeRoomTemperatureSetPoint, value as number, 'Room temperature', callback);
       });
 
     return ventilationThermostatService;
@@ -125,17 +105,7 @@ export class CompactPPlatformAccessory {
 
     dhwThermostatService.getCharacteristic(c.TargetTemperature)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        const dhwTemperature = value as number;
-        this.platform.log.debug('Updating DHW temperature to:', dhwTemperature);
-        this.cts700Modbus.writeDHWSetPoint(dhwTemperature)
-          .then(() => {
-            this.platform.log.debug('DHW temperature update ok:', dhwTemperature);
-            callback(null);
-          })
-          .catch((error) => {
-            this.platform.log.debug('DHW temperature update failed:', error.message);
-            callback(error);
-          });
+        this.handleWrite(CTS700Modbus.prototype.writeDHWSetPoint, value as number, 'DHW temperature', callback);
       });
 
     return dhwThermostatService;
@@ -191,7 +161,6 @@ export class CompactPPlatformAccessory {
           readings.activeSchedule.dhwTemperature,
           readings.activeSchedule.fanSpeed);
 
-        // TODO: This is failing!?
         await this.cts700Modbus.writeRoomTemperatureSetPoint(readings.activeSchedule.temperature);
         await this.cts700Modbus.writeDHWSetPoint(readings.activeSchedule.dhwTemperature);
         await this.cts700Modbus.writeFanSpeed(readings.activeSchedule.fanSpeed);
@@ -251,5 +220,23 @@ export class CompactPPlatformAccessory {
       // TODO: split up error handling, if appropriate.
       this.platform.log.error('Could not update readings and settings.', e.message);
     }
+  }
+
+  private async handleWrite(writer: NumericWriter, value: number, name: string, callback: CharacteristicSetCallback): 
+    Promise<number | null> {
+      
+    this.platform.log.debug(name, 'updating to to:', value);
+
+    return writer.call(this.cts700Modbus, value)
+      .then((result) => {
+        this.platform.log.debug(name, 'update ok. Wrote:', result);
+        callback(null);
+        return result;
+      })
+      .catch((error) => {
+        this.platform.log.debug(name, 'update failed. Error:', error.message);
+        callback(error);
+        return null;
+      });
   }
 }

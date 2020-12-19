@@ -2,6 +2,8 @@ import ModbusRTU from 'modbus-serial';
 import { WriteRegisterResult } from 'modbus-serial/ModbusRTU';
 import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
 
+export declare type NumericWriter = (value: number) => Promise<number>;
+
 export class CTS700Modbus {
 
     private client: ModbusRTU;
@@ -160,25 +162,25 @@ export class CTS700Modbus {
         });
     }
 
-    public async writeFanSpeed(value: number) {
+    public async writeFanSpeed(value: number): Promise<number> {
       return this.writePercentageRegister(Register.FanSpeed, value);
     }
 
-    public async writeRoomTemperatureSetPoint(value: number) {
+    public async writeRoomTemperatureSetPoint(value: number): Promise<number> {
       if (value < 5 || value > 50) {
         throw Error('Value outside of acceptable range.');
       }
       return this.writeTemperatureRegister(Register.RoomTemperatureSetPoint, value);
     }
 
-    public async writeDHWSetPoint(value: number) {
+    public async writeDHWSetPoint(value: number): Promise<number> {
       if (value < 5 || value > 65) {
         throw Error('Value outside of acceptable range.');
       }
       return this.writeTemperatureRegister(Register.DHWTemperatureSetPoint, value);
     }
 
-    private async writePercentageRegister(register: Register, value: number): Promise<WriteRegisterResult> {
+    private async writePercentageRegister(register: Register, value: number): Promise<number> {
       if (value < 0 || value > 100) {
         throw Error('Value outside of acceptable range.');
       }
@@ -186,19 +188,19 @@ export class CTS700Modbus {
       return this.writeSingleRegister(register, modbusValue);
     }
 
-    private async writeTemperatureRegister(register: Register, value: number): Promise<WriteRegisterResult> {
+    private async writeTemperatureRegister(register: Register, value: number): Promise<number> {
       // Convert to modbus format (adjust negative values and get rid of floating point precision)
       const modbusValue = Math.floor(value < 0 ? (value * 10) + 65535 : (value * 10));
       return this.writeSingleRegister(register, modbusValue);
     }
 
-    private async writeSingleRegister(register: Register, value: number): Promise<WriteRegisterResult> {
+    private async writeSingleRegister(register: Register, value: number): Promise<number> {
       return this.client.writeRegister(register, value)
         .then((result) => {
           if (result.value !== value) {
             throw Error('Setting value failed.');
           }
-          return result;
+          return result.value;
         });
     }
 
