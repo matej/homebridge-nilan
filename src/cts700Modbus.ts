@@ -1,5 +1,4 @@
 import ModbusRTU from 'modbus-serial';
-import { WriteRegisterResult } from 'modbus-serial/ModbusRTU';
 import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
 
 export declare type WriterParameterTypes = number | PauseOption | OperationMode;
