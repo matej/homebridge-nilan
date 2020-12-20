@@ -85,6 +85,34 @@ export class CompactPPlatformAccessory {
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         this.handleWrite(CTS700Modbus.prototype.writeRoomTemperatureSetPoint, value as number, 'Room temperature', callback);
       });
+    
+    ventilationThermostatService.getCharacteristic(c.TargetHeatingCoolingState)
+      .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        let pauseOption: PauseOption;
+        let ventilationMode: VentilationMode | null = null;  
+
+        if (value === c.TargetHeatingCoolingState.OFF) {
+          pauseOption = PauseOption.Ventilation;
+        } else if (value === c.TargetHeatingCoolingState.HEAT) {
+          pauseOption = PauseOption.Disabled;
+          ventilationMode = VentilationMode.Heating;
+        } else if (value === c.TargetHeatingCoolingState.COOL) {
+          pauseOption = PauseOption.Disabled;
+          ventilationMode = VentilationMode.Cooling;
+        } else { //  c.TargetHeatingCoolingState.AUTO
+          pauseOption = PauseOption.Disabled;
+          ventilationMode = VentilationMode.Auto;
+        }
+
+        this.handleWrite(CTS700Modbus.prototype.writePauseOption, pauseOption, 'Pause option', (result) => {
+          // Only set ventilation mode if not paused and the previous operation succeeded. 
+          if ((ventilationMode !== null) && (result === null)) {
+            this.handleWrite(CTS700Modbus.prototype.writeVentilationMode, ventilationMode as VentilationMode, 'Ventilation mode', callback);
+          } else {
+            callback(result);
+          }
+        });
+      });
 
     return ventilationThermostatService;
   }
@@ -112,6 +140,13 @@ export class CompactPPlatformAccessory {
     dhwThermostatService.getCharacteristic(c.TargetTemperature)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         this.handleWrite(CTS700Modbus.prototype.writeDHWSetPoint, value as number, 'DHW temperature', callback);
+      });
+
+    dhwThermostatService.getCharacteristic(c.TargetHeatingCoolingState)
+      .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        const pauseOption = value === c.TargetHeatingCoolingState.OFF ? PauseOption.DHW : PauseOption.Disabled;
+
+        this.handleWrite(CTS700Modbus.prototype.writePauseOption, pauseOption, 'Pause option', callback);
       });
 
     return dhwThermostatService;
