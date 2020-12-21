@@ -6,16 +6,50 @@ export declare type NumericWriter = (value: WriterParameterTypes) => Promise<Wri
 
 export class CTS700Modbus {
 
-    private client: ModbusRTU;
+    private client: ModbusRTU | null = null;
+
+    private networkErrors = [
+      'ESOCKETTIMEDOUT',
+      'ETIMEDOUT',
+      'ECONNRESET',
+      'ECONNREFUSED',
+      'EHOSTUNREACH',
+      'ENETRESET',
+      'ECONNABORTED',
+      'ENETUNREACH',
+      'ENOTCONN',
+      'ESHUTDOWN',
+      'EHOSTDOWN',
+      'ENETDOWN',
+      'EWOULDBLOCK',
+      'EAGAIN',
+    ];
 
     constructor() {
-      
-      const client = new ModbusRTU();
-      this.client = client;
+      this.connect();
+    }
 
-      // open connection to a tcp line
-      client.connectTCP('192.168.5.107', { port: 502 });
-      client.setID(1);
+    private connect() {
+      this.client = null;
+
+      const client = new ModbusRTU();
+      client.connectTCP('192.168.5.107', { port: 502 })
+        .then(() => {
+          client.setID(1);
+          client.setTimeout(5000);
+          this.client = client;    
+        })
+        .catch((e) => {
+          this.checkError(e);
+        });
+    }
+
+    // eslint-disable-next-line
+    private checkError(e: any) {
+      // TODO: check error in other places and throttle
+      if(e.errno && this.networkErrors.includes(e.errno) && this.client !== null) {
+        this.client.close(this.connect);
+      }
     }
 
     async fetchReadings(): Promise<Readings> {
@@ -99,6 +133,9 @@ export class CTS700Modbus {
     }
 
     private async readDateTimeRegister(register: Register): Promise<DateTime> {
+      if (this.client === null) {
+        return Promise.reject(new Error('Disconnected.'));
+      }
       const registerCount = 4;
       return this.client.readHoldingRegisters(register, registerCount)
         .then((result) => {
@@ -119,6 +156,9 @@ export class CTS700Modbus {
     }
 
     private async readWeekProgramRegister(register: Register, programCount: number): Promise<Array<WeekScheduleRecord>> {
+      if (this.client === null) {
+        return Promise.reject(new Error('Disconnected.'));
+      }
       const bytesPerProgram = 10;
       const totalBytes = programCount * bytesPerProgram;
       // 2 bytes per register
@@ -153,6 +193,9 @@ export class CTS700Modbus {
     }
 
     private async readSingleRegister(register: Register): Promise<number> {
+      if (this.client === null) {
+        return Promise.reject(new Error('Disconnected.'));
+      }
       return this.client.readHoldingRegisters(register, 1)
         .then((result) => {
           if (result.data.length === 0) {
@@ -209,6 +252,9 @@ export class CTS700Modbus {
     }
 
     private async writeSingleRegister(register: Register, value: number): Promise<number> {
+      if (this.client === null) {
+        return Promise.reject(new Error('Disconnected.'));
+      }
       return this.client.writeRegister(register, value)
         .then((result) => {
           if (result.value !== value) {
