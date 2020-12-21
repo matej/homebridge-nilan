@@ -1,5 +1,5 @@
 import { Service, PlatformAccessory, CharacteristicEventTypes, CharacteristicValue, CharacteristicSetCallback } from 'homebridge';
-import { deepEqual } from 'deep-equal';
+import deepEqual from 'deep-equal';
 
 import { OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
 import { CTS700Modbus, NumericWriter, WriterParameterTypes } from './cts700Modbus';
@@ -145,7 +145,6 @@ export class CompactPPlatformAccessory {
     dhwThermostatService.getCharacteristic(c.TargetHeatingCoolingState)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         const pauseOption = value === c.TargetHeatingCoolingState.OFF ? PauseOption.DHW : PauseOption.Disabled;
-
         this.handleWrite(CTS700Modbus.prototype.writePauseOption, pauseOption, 'Pause option', callback);
       });
 
