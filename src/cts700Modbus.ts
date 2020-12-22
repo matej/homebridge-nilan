@@ -1,4 +1,6 @@
 import ModbusRTU from 'modbus-serial';
+import { throttle } from 'throttle-debounce';
+import { ReadRegisterResult, WriteRegisterResult } from 'modbus-serial/ModbusRTU';
 import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
 
 export declare type WriterParameterTypes = number | PauseOption | OperationMode;
@@ -40,15 +42,26 @@ export class CTS700Modbus {
           this.client = client;    
         })
         .catch((e) => {
-          this.checkError(e);
+          this.checkError(e, true);
         });
     }
 
+    private throttledReconnect = throttle(10000, () => {
+      if (this.client !== null && this.client.isOpen) {
+        this.client.close(() => {
+          this.connect();
+        });
+      } else {
+        this.connect();
+      }
+    });
+
     // eslint-disable-next-line
-    private checkError(e: any) {
-      // TODO: check error in other places and throttle
-      if(e.errno && this.networkErrors.includes(e.errno) && this.client !== null) {
-        this.client.close(this.connect);
+    private checkError(e: any, forceRetry: boolean = false) {
+      if((e.message && this.networkErrors.includes(e.message))
+          || (e.errno && this.networkErrors.includes(e.errno)) 
+          || forceRetry) {
+        this.throttledReconnect();
       }
     }
 
@@ -133,11 +146,8 @@ export class CTS700Modbus {
     }
 
     private async readDateTimeRegister(register: Register): Promise<DateTime> {
-      if (this.client === null) {
-        return Promise.reject(new Error('Disconnected.'));
-      }
       const registerCount = 4;
-      return this.client.readHoldingRegisters(register, registerCount)
+      return this.readHoldingRegisters(register, registerCount)
         .then((result) => {
           if (result.data.length !== registerCount) {
             throw Error('Invalid result returned.');
@@ -156,14 +166,11 @@ export class CTS700Modbus {
     }
 
     private async readWeekProgramRegister(register: Register, programCount: number): Promise<Array<WeekScheduleRecord>> {
-      if (this.client === null) {
-        return Promise.reject(new Error('Disconnected.'));
-      }
       const bytesPerProgram = 10;
       const totalBytes = programCount * bytesPerProgram;
       // 2 bytes per register
       const registerCount = totalBytes / 2;
-      return this.client.readHoldingRegisters(register, registerCount)
+      return this.readHoldingRegisters(register, registerCount)
         .then((result) => {
           if (result.data.length !== registerCount) {
             throw Error('Invalid result returned.');
@@ -193,15 +200,23 @@ export class CTS700Modbus {
     }
 
     private async readSingleRegister(register: Register): Promise<number> {
-      if (this.client === null) {
-        return Promise.reject(new Error('Disconnected.'));
-      }
-      return this.client.readHoldingRegisters(register, 1)
+      return this.readHoldingRegisters(register, 1)
         .then((result) => {
           if (result.data.length === 0) {
             throw Error('No result returned.');
           }
           return result.data[0];
+        });
+    }
+
+    private async readHoldingRegisters(dataAddress: number, length: number): Promise<ReadRegisterResult> {
+      if (this.client === null) {
+        return Promise.reject(new Error('Disconnected.'));
+      }
+      return this.client.readHoldingRegisters(dataAddress, length)
+        .catch((e) => {
+          this.checkError(e);
+          throw e;
         });
     }
 
@@ -252,15 +267,23 @@ export class CTS700Modbus {
     }
 
     private async writeSingleRegister(register: Register, value: number): Promise<number> {
-      if (this.client === null) {
-        return Promise.reject(new Error('Disconnected.'));
-      }
-      return this.client.writeRegister(register, value)
+      return this.writeRegister(register, value)
         .then((result) => {
           if (result.value !== value) {
             throw Error('Setting value failed.');
           }
           return result.value;
+        });
+    }
+
+    private async writeRegister(dataAddress: number, value: number): Promise<WriteRegisterResult> {
+      if (this.client === null) {
+        return Promise.reject(new Error('Disconnected.'));
+      }
+      return this.client.writeRegister(dataAddress, value)
+        .catch((e) => {
+          this.checkError(e);
+          throw e;
         });
     }
 
