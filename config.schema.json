@@ -3,14 +3,29 @@
   "pluginType": "platform",
   "singular": true,
   "schema": {
-    "type": "object",
-    "properties": {
-      "name": {
-        "title": "Name",
-        "type": "string",
-        "required": true,
-        "default": "Example Dynamic Platform"
+    "devices": {
+      "type": "array",
+      "items": {
+        "title": "Device",
+        "type": "object",
+        "properties": {
+          "host": {
+            "title": "IP Address",
+            "type": "string",
+            "required": true,
+            "format": "ipv4",
+            "default": "192.168.5.107",
+            "description": "The IP Address of the Nilan device on your network. Check the control panel in Super user mode under Settings -> Network Settings. Make sure you can ping the Nilan unit from your Homebridge device."
+          },
+          "schedule": {
+            "title": "Adjust for week schedule.",
+            "type": "boolean",
+            "default": true,
+            "description": "Query the week schedule and adjust set values when the program changes. If disabled the plugin always reflect user set values, which might differ to the device values if schedules are configured on the device."
+          }
+        }
       }
     }
+
   }
 }
