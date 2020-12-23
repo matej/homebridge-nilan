@@ -9,13 +9,27 @@
         "title": "Device",
         "type": "object",
         "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string",
+            "required": true,
+            "default": "Compact P"
+          },
+          "mac": {
+            "title": "MAC Address",
+            "type": "string",
+            "required": true,
+            "pattern": "^([A-Fa-f0-9]{2}:){5}[A-Fa-f0-9]{2}$",
+            "placeholder": "00:00:00:00:00:00",
+            "description": "Check the control panel in Super user mode under Settings -> Network Settings. This is used to uniquely identify your device."
+          },
           "host": {
             "title": "IP Address",
             "type": "string",
             "required": true,
             "format": "ipv4",
             "default": "192.168.5.107",
-            "description": "The IP Address of the Nilan device on your network. Check the control panel in Super user mode under Settings -> Network Settings. Make sure you can ping the Nilan unit from your Homebridge device."
+            "description": "Check the control panel in Super user mode under Settings -> Network Settings. Make sure you can ping the Nilan unit from your Homebridge device."
           },
           "schedule": {
             "title": "Adjust for week schedule.",
