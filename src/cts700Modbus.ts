@@ -72,14 +72,8 @@ export class CTS700Modbus {
         panelTemperature: await this.readTemperatureRegister(Register.PanelTemperature),
         actualHumidity: await this.readPercentageRegister(Register.ActualHumidity),
         dhwTankTopTemperature: await this.readTemperatureRegister(Register.DHWTopTankTemperature),
+        currentDateTime: await this.readDateTimeRegister(Register.CurrentTime),
       };
-      
-      const time = await this.readDateTimeRegister(Register.CurrentTime);
-      const week = await this.readWeekProgramRegister(Register.FistWeekProgram, 14);
-
-      if (week.length > 0) {
-        readings.activeSchedule = this.findCurrentActiveWeekRecord(week, time);
-      }
 
       return readings;
     }
@@ -94,6 +88,17 @@ export class CTS700Modbus {
         operationMode: await this.readOperationModeRegister(Register.OperationMode),
       };  
       return settings;
+    }
+
+    async fetchActiveWeekProgramForDateTime(dateTime: DateTime): Promise<WeekScheduleRecord> {
+      // Note: There's a second week program register, which is currently ignored!
+      return this.readWeekProgramRegister(Register.FistWeekProgram, 14)
+        .then((weekSchedule) => {
+          if (weekSchedule.length === 0) {
+            throw Error('Week schedule empty.');
+          }
+          return this.findCurrentActiveWeekRecord(weekSchedule, dateTime);
+        });
     }
 
     private async readTemperatureRegister(register: Register): Promise<number> {

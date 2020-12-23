@@ -104,8 +104,8 @@ export interface Readings {
 	actualHumidity: number;
 	// DHW tank top temperature in C times 10
 	dhwTankTopTemperature: number;
-	// Currently active schedule.
-	activeSchedule?: WeekScheduleRecord;
+	// Current device time.
+	currentDateTime: DateTime;
 }
 
 // Nilan date / time entry

@@ -1,7 +1,7 @@
 import { Service, PlatformAccessory, CharacteristicEventTypes, CharacteristicValue, CharacteristicSetCallback } from 'homebridge';
 import deepEqual from 'deep-equal';
 
-import { OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
+import { DateTime, OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
 import { CTS700Modbus, NumericWriter, WriterParameterTypes } from './cts700Modbus';
 import { NilanHomebridgePlatform } from './platform';
 
@@ -14,6 +14,7 @@ export class CompactPPlatformAccessory {
   
   private cts700Modbus: CTS700Modbus;
 
+  private processedDateTime?: DateTime;
   private processedSchedule?: WeekScheduleRecord;
 
   constructor(
@@ -194,20 +195,31 @@ export class CompactPPlatformAccessory {
       this.ventilationThermostatService.updateCharacteristic(c.CurrentRelativeHumidity, readings.actualHumidity);
       this.dhwThermostatService.updateCharacteristic(c.CurrentTemperature, readings.dhwTankTopTemperature);
 
-      // Set before fetching settings!
-      if (readings.activeSchedule && !deepEqual(readings.activeSchedule, this.processedSchedule)) {
-        this.platform.log.debug('Updating fan temperature, dhw temperature and fan speed to match schedule.',
-          readings.activeSchedule.temperature,
-          readings.activeSchedule.dhwTemperature,
-          readings.activeSchedule.fanSpeed);
+      // The schedule only has minute precision, so we can ignore checks if at least a minute didn't pass. 
+      const normalizedDateTime = readings.currentDateTime;
+      normalizedDateTime.second = 0;
+      if (!deepEqual(normalizedDateTime, this.processedDateTime)) {
+        this.platform.log.debug('Checking week schedule.');
+        const activeSchedule = await this.cts700Modbus.fetchActiveWeekProgramForDateTime(readings.currentDateTime);
 
-        await this.cts700Modbus.writeRoomTemperatureSetPoint(readings.activeSchedule.temperature);
-        await this.cts700Modbus.writeDHWSetPoint(readings.activeSchedule.dhwTemperature);
-        await this.cts700Modbus.writeFanSpeed(readings.activeSchedule.fanSpeed);
+        if (activeSchedule && !deepEqual(activeSchedule, this.processedSchedule)) {
+          this.platform.log.debug('Updating fan temperature, dhw temperature and fan speed to match schedule.',
+            activeSchedule.temperature,
+            activeSchedule.dhwTemperature,
+            activeSchedule.fanSpeed);
 
-        this.platform.log.debug('Updated fan temperature, dhw temperature and fan speed to match schedule.');
+          await this.cts700Modbus.writeRoomTemperatureSetPoint(activeSchedule.temperature);
+          await this.cts700Modbus.writeDHWSetPoint(activeSchedule.dhwTemperature);
+          await this.cts700Modbus.writeFanSpeed(activeSchedule.fanSpeed);
 
-        this.processedSchedule = readings.activeSchedule;
+          this.platform.log.debug('Updated fan temperature, dhw temperature and fan speed to match schedule.');
+
+          this.processedSchedule = activeSchedule;
+        } else {
+          this.platform.log.debug('No updates for week schedule needed.');
+        }
+
+        this.processedDateTime = normalizedDateTime;
       }
       
       const settings = await this.cts700Modbus.fetchSettings();
