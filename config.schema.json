@@ -15,14 +15,6 @@
             "required": true,
             "default": "Compact P"
           },
-          "mac": {
-            "title": "MAC Address",
-            "type": "string",
-            "required": true,
-            "pattern": "^([A-Fa-f0-9]{2}:){5}[A-Fa-f0-9]{2}$",
-            "placeholder": "00:00:00:00:00:00",
-            "description": "Check the control panel in Super user mode under Settings -> Network Settings. This is used to uniquely identify your device."
-          },
           "host": {
             "title": "IP Address",
             "type": "string",
