@@ -9,7 +9,7 @@ This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) suppor
 
 ### Compact P
 
-[Compact P](https://www.nilan.dk/produkter/ventilation-med-opvarmning/ventilation-og-varmt-brugsvand/compact-p) ventilation and heating system with the CTS 700 control panel (older **non-touchscreen** version). Following Modbus Registers Description date 20150826.
+[Compact P](https://www.nilan.dk/produkter/ventilation-med-opvarmning/ventilation-og-varmt-brugsvand/compact-p) ventilation and heating system with the CTS 700 control panel (older **non-touchscreen** version). Following the Modbus Registers Description document, dated 20150826.
 
 Note that the new CTS 700 touchscreen control panel uses a different version of the communication protocol and hence needs a different implementation.
 
@@ -150,4 +150,11 @@ Users can then install the  *beta* version by appending `@beta` to the install c
 sudo npm install -g homebridge-example-plugin@beta
 ```
 
+# Disclaimer
+
+The plugin is based on the open Nilan Modbus protocol and only accesses user-level registers access without needing any privileged access. While the plugin was extensively tested on the author's own setup, there is no guarantees given that the it will perform without issues in other environments. Please proceed at your own risk.
+
+This plugin, or it's author is in no way associated with Nilan A/S.  
+
+Nilan is a registered trademark belonging to [Nilan A/S]((https://www.nilan.dk)).
 
