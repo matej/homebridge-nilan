@@ -1,7 +1,17 @@
 import ModbusRTU from 'modbus-serial';
 import { throttle } from 'throttle-debounce';
 import { ReadRegisterResult, WriteRegisterResult } from 'modbus-serial/ModbusRTU';
-import {DateTime, Metadata, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
+import {
+  DateTime, 
+  Metadata, 
+  OperationMode, 
+  PauseOption, 
+  Readings, 
+  Register, 
+  Settings, 
+  VentilationMode, 
+  WeekScheduleRecord,
+} from './cts700Data';
 
 export declare type WriterParameterTypes = number | PauseOption | OperationMode;
 export declare type NumericWriter = (value: WriterParameterTypes) => Promise<WriterParameterTypes>;
