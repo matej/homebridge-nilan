@@ -234,7 +234,7 @@ export class CTS700Modbus {
           for (let segment = 0; segment < 6; segment++) {
             values.push(result.buffer.readUInt8(segment).toString(16).toUpperCase().padStart(2, '0'));
           }
-          return values.join('.');
+          return values.join(':');
         });
     }
 
