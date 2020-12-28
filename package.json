@@ -1,16 +1,16 @@
 {
   "private": true,
   "displayName": "Nilan Compact P",
-  "name": "homebridge-nilan-compact-p",
+  "name": "homebridge-nilan",
   "version": "1.0.0",
   "description": "Homebridge plugin for Nilan Compact P.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git@github.com:matej/homebridge-nilan-compact-p.git"
+    "url": "git@github.com:matej/homebridge-nilan.git"
   },
   "bugs": {
-    "url": "https://github.com/matej/homebridge-nilan-compact-p/issues"
+    "url": "https://github.com/matej/homebridge-nilan/issues"
   },
   "engines": {
     "node": ">=10.17.0",

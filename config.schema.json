@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "NilanCompactP",
+  "pluginAlias": "Nilan",
   "pluginType": "platform",
   "singular": true,
   "schema": {
@@ -27,7 +27,7 @@
             "title": "Adjust for week schedule.",
             "type": "boolean",
             "default": true,
-            "description": "Query the week schedule and adjust set values when the program changes. If disabled the plugin always reflect user set values, which might differ to the device values if schedules are configured on the device."
+            "description": "Query the week schedule and adjust set values when the program changes. If disabled the plugin always reflects user set values, which might differ to the device values if schedules are configured on the device."
           }
         }
       }
