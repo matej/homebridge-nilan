@@ -40,7 +40,23 @@ export enum Register {
 	// Current Date-Time value.
 	CurrentTime = 4722,
 	// First 14 program records of Week Program.
-	FistWeekProgram = 573
+	FistWeekProgram = 573,
+	// The MAC address for main board device.
+	// Reg1 Hi-byte: MAC 1-st byte
+	// Reg1 Lo-byte: MAC 2-nd byte
+	// Reg2 Hi-byte: MAC 3-rd byte
+	// Reg2 Lo-byte: MAC 4-th byte
+	// Reg3 Hi-byte: MAC 5-th byte
+	// Reg3 Lo-byte: MAC 6-th byte
+	// The rest: Reserved
+	MacAddress = 1330,
+	// Software version.
+	// Registers quantity : 2
+	// Reg1 Hi-byte: Major version number
+	// Reg1 Lo-byte:Hi Middle version number
+	// Reg2 Hi-byte: Lo Middle version number
+	// Reg2 Lo-byte:Minor version number
+	SoftwareVersion = 5065
   }
 
 export enum PauseOption {
@@ -75,6 +91,15 @@ export enum OperationMode {
 	// Hot water mode.
 	DHW
   }
+
+// Device metadata for the Nilan system
+export interface Metadata {
+    // The Serial number of control board.
+	macAddress: string;
+	// Software version.
+	softwareVersion: string;
+}
+
 
 // Settings of Nilan system
 export interface Settings {

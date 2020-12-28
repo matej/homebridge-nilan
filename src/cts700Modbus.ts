@@ -1,7 +1,7 @@
 import ModbusRTU from 'modbus-serial';
 import { throttle } from 'throttle-debounce';
 import { ReadRegisterResult, WriteRegisterResult } from 'modbus-serial/ModbusRTU';
-import {DateTime, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
+import {DateTime, Metadata, OperationMode, PauseOption, Readings, Register, Settings, VentilationMode, WeekScheduleRecord} from './cts700Data';
 
 export declare type WriterParameterTypes = number | PauseOption | OperationMode;
 export declare type NumericWriter = (value: WriterParameterTypes) => Promise<WriterParameterTypes>;
@@ -63,6 +63,15 @@ export class CTS700Modbus {
           || forceRetry) {
         this.throttledReconnect();
       }
+    }
+
+    async fetchMetadata(): Promise<Metadata> {
+      const metadata: Metadata = {
+        macAddress: await this.readMacAddressRegister(Register.MacAddress),
+        softwareVersion: await this.readSoftwareVersionRegister(Register.SoftwareVersion),
+      };
+
+      return metadata;
     }
 
     async fetchReadings(): Promise<Readings> {
@@ -201,6 +210,28 @@ export class CTS700Modbus {
             byte += bytesPerProgram;
           }
           return schedule;
+        });
+    }
+
+    private async readMacAddressRegister(register: Register): Promise<string> {
+      return this.readHoldingRegisters(register, 8)
+        .then((result) => {
+          const values: Array<string> = [];
+          for (let segment = 0; segment < 6; segment++) {
+            values.push(result.buffer.readUInt8(segment).toString(16).toUpperCase().padStart(2, '0'));
+          }
+          return values.join('.');
+        });
+    }
+
+    private async readSoftwareVersionRegister(register: Register): Promise<string> {
+      return this.readHoldingRegisters(register, 2)
+        .then((result) => {
+          const major = result.buffer.readInt8(0);
+          const middle = result.buffer.readInt16BE(1);
+          const minor = result.buffer.readInt8(3);
+          // This is odd, but that's what matches the display
+          return minor + '.' + middle + '.' + major;
         });
     }
 
