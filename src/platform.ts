@@ -1,4 +1,5 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
+import fakegato from 'fakegato-history';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { CompactPPlatformAccessory } from './compactPAccessory';
@@ -10,11 +11,15 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
   // This is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
 
+  private FakeGatoHistoryService;
+
   constructor(
     public readonly log: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
+
+    this.FakeGatoHistoryService = fakegato(api);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -72,7 +77,7 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new CompactPPlatformAccessory(this, existingAccessory);
+        new CompactPPlatformAccessory(this, existingAccessory, this.FakeGatoHistoryService);
           
         // update accessory cache with any changes to the accessory details and information
         this.api.updatePlatformAccessories([existingAccessory]);
@@ -85,7 +90,7 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `compactPAccessory.ts`
-        new CompactPPlatformAccessory(this, accessory);
+        new CompactPPlatformAccessory(this, accessory, this.FakeGatoHistoryService);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);

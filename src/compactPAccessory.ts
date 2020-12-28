@@ -1,5 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicEventTypes, CharacteristicValue, CharacteristicSetCallback } from 'homebridge';
 import deepEqual from 'deep-equal';
+import fakegato from 'fakegato-history';
 
 import { DateTime, OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
 import { CTS700Modbus, NumericWriter, WriterParameterTypes } from './cts700Modbus';
@@ -11,6 +12,8 @@ export class CompactPPlatformAccessory {
   private dhwThermostatService: Service;
   private outsideTemperatureSensorService: Service;
   private panelTemperatureSensorService: Service;
+
+  private ventilationThermostatHistoryService;
   
   private cts700Modbus: CTS700Modbus;
 
@@ -20,6 +23,7 @@ export class CompactPPlatformAccessory {
   constructor(
     private readonly platform: NilanHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
+    private readonly FakeGatoHistoryService,
   ) {
 
     this.cts700Modbus = new CTS700Modbus(this.accessory.context.device.host, () => {
@@ -36,6 +40,12 @@ export class CompactPPlatformAccessory {
     this.dhwThermostatService = this.setUpDHWThermostat(platform, accessory);
     this.outsideTemperatureSensorService = this.setUpOutsideTemperatureSensor(platform, accessory);
     this.panelTemperatureSensorService = this.setUpPanelTemperatureSensor(platform, accessory);
+
+    // TODO: The issue with this approach is that the temperature shows up under all temperature-related
+    // services for this accessory, not just under the ventilation thermostat.
+    this.ventilationThermostatHistoryService = new this.FakeGatoHistoryService('thermo', accessory, {
+      log: this.platform.log,
+    });
 
     setInterval(() => {
       this.updateFromDevice(platform);
@@ -213,7 +223,8 @@ export class CompactPPlatformAccessory {
       // The schedule only has minute precision, so we can ignore checks if at least a minute didn't pass. 
       const normalizedDateTime = readings.currentDateTime;
       normalizedDateTime.second = 0;
-      if (!deepEqual(normalizedDateTime, this.processedDateTime)) {
+      const isNewMinute = !deepEqual(normalizedDateTime, this.processedDateTime);
+      if (isNewMinute) {
         this.platform.log.debug('Checking week schedule.');
         const activeSchedule = await this.cts700Modbus.fetchActiveWeekProgramForDateTime(readings.currentDateTime);
 
@@ -283,6 +294,17 @@ export class CompactPPlatformAccessory {
       this.ventilationFanService.updateCharacteristic(c.RotationSpeed, settings.fanSpeed);
       this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, settings.roomTemperatureSetPoint);
       this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, settings.dhwTemperatureSetPoint);
+
+      if (isNewMinute) {
+        const isHeatingOrCooling = settings.paused !== PauseOption.Ventilation && settings.paused !== PauseOption.All && 
+        (settings.operationMode === OperationMode.Heating || settings.operationMode === OperationMode.Cooling);
+        this.ventilationThermostatHistoryService.addEntry({
+          time: Math.round(new Date().valueOf() / 1000), 
+          currentTemp: readings.roomTemperature, 
+          setTemp: settings.roomTemperatureSetPoint, 
+          valvePosition: isHeatingOrCooling ? 100 : 0,
+        });
+      }
     } catch (e) {
       this.platform.log.error('Could not update readings and settings.', e.message);
     }
