@@ -213,7 +213,8 @@ export class CompactPPlatformAccessory {
       // The schedule only has minute precision, so we can ignore checks if at least a minute didn't pass. 
       const normalizedDateTime = readings.currentDateTime;
       normalizedDateTime.second = 0;
-      if (!deepEqual(normalizedDateTime, this.processedDateTime)) {
+      const shouldSkipSchedule = this.accessory.context.device.schedule === false;
+      if (!shouldSkipSchedule && !deepEqual(normalizedDateTime, this.processedDateTime)) {
         this.platform.log.debug('Checking week schedule.');
         const activeSchedule = await this.cts700Modbus.fetchActiveWeekProgramForDateTime(readings.currentDateTime);
 
