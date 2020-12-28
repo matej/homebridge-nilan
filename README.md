@@ -1,16 +1,19 @@
-
-<p align="center">
-
-<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
-
-</p>
+<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-color-round.png" height="70"> <img src="https://en.nilan.dk/Files/Billeder/Press/Nilan_logo.png" height="70" >
 
 
-# Homebridge Platform Plugin Template
+# Nilan Homebridge Plugin
 
-This is a template Homebridge platform plugin and can be used as a base to help you get started developing your own plugin.
+This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) support for certain [Nilan](https://www.nilan.dk) devices via [Homebridge](https://homebridge.io).
 
-This template should be use in conjunction with the [developer documentation](https://developers.homebridge.io/). A full list of all supported service types, and their characteristics is available on this site.
+## Supported Devices
+
+### Compact P
+
+[Compact P](https://www.nilan.dk/produkter/ventilation-med-opvarmning/ventilation-og-varmt-brugsvand/compact-p) ventilation and heating system with the CTS 700 control panel (older **non-touchscreen** version). Following Modbus Registers Description date 20150826.
+
+Note that the new CTS 700 touchscreen control panel uses a different version of the communication protocol and hence needs a different implementation.
+
+<img src="https://en.nilan.dk/Files/Billeder/Press/Nilan-Compact-P.jpg" height="120" >
 
 ## Clone As Template
 
