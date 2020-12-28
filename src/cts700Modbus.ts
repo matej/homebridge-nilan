@@ -27,7 +27,10 @@ export class CTS700Modbus {
       'EAGAIN',
     ];
 
-    constructor() {
+    constructor(
+      private readonly host: string,
+      private readonly didConnect: () => void,
+    ) {
       this.connect();
     }
 
@@ -35,11 +38,12 @@ export class CTS700Modbus {
       this.client = null;
 
       const client = new ModbusRTU();
-      client.connectTCP('192.168.5.107', { port: 502 })
+      client.connectTCP(this.host, { port: 502 })
         .then(() => {
           client.setID(1);
           client.setTimeout(5000);
-          this.client = client;    
+          this.client = client;
+          this.didConnect();    
         })
         .catch((e) => {
           this.checkError(e, true);

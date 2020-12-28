@@ -22,13 +22,14 @@ export class CompactPPlatformAccessory {
     private readonly accessory: PlatformAccessory,
   ) {
 
-    this.cts700Modbus = new CTS700Modbus(); 
+    this.cts700Modbus = new CTS700Modbus(this.accessory.context.device.host, () => {
+      this.setUpAfterConnection();
+    }); 
 
     // Accessory information
     this.accessory.getService(platform.Service.AccessoryInformation)!
-      .setCharacteristic(platform.Characteristic.Manufacturer, 'Nilan')
-      .setCharacteristic(platform.Characteristic.Model, 'Compact P')
-      .setCharacteristic(platform.Characteristic.SerialNumber, 'nilan-compact-p-001');
+      .setCharacteristic(platform.Characteristic.Manufacturer, 'Nilan A/S')
+      .setCharacteristic(platform.Characteristic.Model, 'Compact P');
 
     this.ventilationFanService = this.setUpVentilationFan(platform, accessory);
     this.ventilationThermostatService = this.setUpVentilationThermostat(platform, accessory);
@@ -39,6 +40,20 @@ export class CompactPPlatformAccessory {
     setInterval(() => {
       this.updateFromDevice(platform);
     }, 10000);
+  }
+
+  private async setUpAfterConnection() {
+    try {
+      const metadata = await this.cts700Modbus.fetchMetadata();
+      this.platform.log.debug('Updating metadata:', metadata);
+
+      this.accessory.getService(this.platform.Service.AccessoryInformation)!
+        .setCharacteristic(this.platform.Characteristic.SerialNumber, metadata.macAddress)
+        .setCharacteristic(this.platform.Characteristic.FirmwareRevision, metadata.softwareVersion);
+
+    } catch (e) {
+      this.platform.log.error('Could obtain device metadata after connection.', e.message);
+    }
   }
 
   private setUpVentilationFan(platform: NilanHomebridgePlatform, accessory: PlatformAccessory): Service {
