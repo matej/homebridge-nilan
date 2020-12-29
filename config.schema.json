@@ -27,7 +27,7 @@
             "title": "Adjust for week schedule.",
             "type": "boolean",
             "default": true,
-            "description": "Query the week schedule and adjust set values when the program changes. If disabled the plugin always reflects user set values, which might differ to the device values if schedules are configured on the device."
+            "description": "This option should be enabled, if you have a week schedule programmed on your control unit. The option ensures that the values reported in HomeKit update when the week program changes. Otherwise HmeKit just reflects the last set user value."
           }
         }
       }
