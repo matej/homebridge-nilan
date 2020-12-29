@@ -41,6 +41,8 @@ export enum Register {
 	CurrentTime = 4722,
 	// First 14 program records of Week Program.
 	FistWeekProgram = 573,
+	// Second 14 program records of Week Program.
+	SecondWeekProgram = 643,
 	// The MAC address for main board device.
 	// Reg1 Hi-byte: MAC 1-st byte
 	// Reg1 Lo-byte: MAC 2-nd byte

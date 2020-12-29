@@ -113,15 +113,13 @@ export class CTS700Modbus {
       return settings;
     }
 
-    async fetchActiveWeekProgramForDateTime(dateTime: DateTime): Promise<WeekScheduleRecord> {
-      // Note: There's a second week program register, which is currently ignored!
-      return this.readWeekProgramRegister(Register.FistWeekProgram, 14)
-        .then((weekSchedule) => {
-          if (weekSchedule.length === 0) {
-            throw Error('Week schedule empty.');
-          }
-          return this.findCurrentActiveWeekRecord(weekSchedule, dateTime);
-        });
+    async fetchActiveWeekProgramForDateTime(dateTime: DateTime): Promise<WeekScheduleRecord | null> {
+      const weekSchedule = await this.readWeekProgramRegister(Register.FistWeekProgram, 14);
+      if (weekSchedule.length === 14) {
+        const secondWeekSchedule = await this.readWeekProgramRegister(Register.SecondWeekProgram, 14);
+        weekSchedule.concat(secondWeekSchedule);
+      }
+      return this.findCurrentActiveWeekRecord(weekSchedule, dateTime);
     }
 
     private async readTemperatureRegister(register: Register): Promise<number> {
@@ -337,7 +335,12 @@ export class CTS700Modbus {
         });
     }
 
-    private findCurrentActiveWeekRecord(records: Array<WeekScheduleRecord>, time: DateTime): WeekScheduleRecord {
+    private findCurrentActiveWeekRecord(records: Array<WeekScheduleRecord>, time: DateTime): WeekScheduleRecord | null {
+      if (records.length === 0) {
+        return null;
+      } else if (records.length === 1) {
+        return records[0];
+      }
       // We create a fake schedule record based on the current time.
       // After sorting we just take the preceding entry as the currently
       // active schedule record.
