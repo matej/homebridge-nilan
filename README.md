@@ -80,7 +80,7 @@ Be sure to update the `host` parameter to match your device (if you changed the 
 
 The `schedule` option should be enabled, if you have a week schedule programmed on your control unit. The option ensures that the values reported in HomeKit update when the week program changes. Otherwise HmeKit just reflects the last set user value.
 
-# Development notes
+# Developer Notes
 
 ## Setup Development Environment
 
@@ -106,7 +106,7 @@ TypeScript needs to be compiled into JavaScript before it can run. The following
 npm run build
 ```
 
-## Link To Homebridge
+## Link to Homebridge
 
 Run this command so your global install of Homebridge can discover the plugin in your development environment:
 
@@ -120,7 +120,7 @@ You can now start Homebridge, use the `-D` flag so you can see debug log message
 homebridge -D
 ```
 
-## Watch For Changes and Build Automatically
+## Watch for Changes and Build Automatically
 
 If you want to have your code compile automatically as you make changes, and restart Homebridge automatically between changes you can run:
 
