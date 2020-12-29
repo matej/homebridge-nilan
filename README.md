@@ -15,19 +15,67 @@ Note that the new CTS 700 touchscreen control panel uses a different version of 
 
 <img src="https://en.nilan.dk/Files/Billeder/Press/Nilan-Compact-P.jpg" height="120" >
 
-## Clone As Template
+## Hardware Setup
 
-Click the link below to create a new GitHub Repository using this template, or click the *Use This Template* button above.
+Use the built-in network cable to connect the Compact P to your home network. The unit's default IP address is `192.168.5.107`. You need to make sure you can reach the unit from the device that is hosting the Homebridge server (e.g., your [Raspberry Pi](https://www.raspberrypi.org)). If the Homebridge device is on the same network you have to main options.
 
-<span align="center">
+### Adjust the Device IP
 
-### [Create New Repository From Template](https://github.com/homebridge/homebridge-plugin-template/generate)
+Adjust the Nilan network settings via the control panel. First Switch to Super User mode (`Settings > Change user level`), then adjust the IP Address, Network mask and Network gateway to match your network configuration (`Settings > Network settings`). Be sure to select a free IP address on your network that is outside of any DHCP server IP ranges.
 
-</span>
+### Add Second Subnet (Advanced)
+
+Adjust your router configuration to connect your current subnet to `192.168.1.0/24`. With this you can leave the default device settings and reach `192.168.5.107` from the rest of your network. 
+
+The exact details will differ depending on your router and IP range. Example with `192.168.1.0/24` as the current subnet and a MikroTik router:
+
+```
+ip address add interface=bridge1 address=192.168.5.1/24
+```
+
+```
+ip fire fil add chain=forward src-address=192.168.1.0/24 dst-address=192.168.5.0/24 action=accept
+ip fire fil add chain=forward src-address=192.168.5.0/24 dst-address=192.168.1.0/24 action=accept
+```
+
+## Software Setup
+
+1. Install Homebridge by following [the official wiki](https://github.com/homebridge/homebridge/wiki).
+1. Install this plugin using [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x), or by running `npm install -g homebridge-nilan`.
+2. Add the configuration to your homebridge [config.json](https://github.com/homebridge/homebridge/wiki/Homebridge-Config-JSON-Explained).
+
+## Configuration
+
+This plugin supports [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x). You can use the web interface to configure all settings.
+
+Alternatively you can enable the plugin manually in [config.json](https://github.com/homebridge/homebridge/wiki/Homebridge-Config-JSON-Explained). 
+
+```json
+"platforms": [
+    {
+        "devices": [
+            {
+                "name": "Compact P",
+                "host": "192.168.5.107",
+                "schedule": true
+            }
+        ],
+        "platform": "Nilan"
+    }
+]
+```
+
+Be sure to update the `host` parameter to match your device (if you changed the IP). 
+
+### Schedule
+
+The `schedule` option should be enabled (default value), if you have a week schedule programmed on your control unit. The option ensures that the values reported in HomeKit update when the week program changes. Otherwise HmeKit just reflects the last set user value.
+
+# Development notes
 
 ## Setup Development Environment
 
-To develop Homebridge plugins you must have Node.js 12 or later installed, and a modern code editor such as [VS Code](https://code.visualstudio.com/). This plugin template uses [TypeScript](https://www.typescriptlang.org/) to make development easier and comes with pre-configured settings for [VS Code](https://code.visualstudio.com/) and ESLint. If you are using VS Code install these extensions:
+This plugin requires Node.js 12 or later and a modern code editor such as [VS Code](https://code.visualstudio.com/). This plugin uses [TypeScript](https://www.typescriptlang.org/) and comes with pre-configured settings for [VS Code](https://code.visualstudio.com/) and ESLint. If you are using VS Code install these extensions:
 
 * [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
 
@@ -92,63 +140,6 @@ npm run watch
 ```
 
 This will launch an instance of Homebridge in debug mode which will restart every time you make a change to the source code. It will load the config stored in the default location under `~/.homebridge`. You may need to stop other running instances of Homebridge while using this command to prevent conflicts. You can adjust the Homebridge startup command in the [`nodemon.json`](./nodemon.json) file.
-
-## Customise Plugin
-
-You can now start customising the plugin template to suit your requirements.
-
-* [`src/platform.ts`](./src/platform.ts) - this is where your device setup and discovery should go.
-* [`src/platformAccessory.ts`](./src/platformAccessory.ts) - this is where your accessory control logic should go, you can rename or create multiple instances of this file for each accessory type you need to implement as part of your platform plugin. You can refer to the [developer documentation](https://developers.homebridge.io/) to see what characteristics you need to implement for each service type.
-* [`config.schema.json`](./config.schema.json) - update the config schema to match the config you expect from the user. See the [Plugin Config Schema Documentation](https://developers.homebridge.io/#/config-schema).
-
-## Versioning Your Plugin
-
-Given a version number `MAJOR`.`MINOR`.`PATCH`, such as `1.4.3`, increment the:
-
-1. **MAJOR** version when you make breaking changes to your plugin,
-2. **MINOR** version when you add functionality in a backwards compatible manner, and
-3. **PATCH** version when you make backwards compatible bug fixes.
-
-You can use the `npm version` command to help you with this:
-
-```bash
-# major update / breaking changes
-npm version major
-
-# minor update / new features
-npm version update
-
-# patch / bugfixes
-npm version patch
-```
-
-## Publish Package
-
-When you are ready to publish your plugin to [npm](https://www.npmjs.com/), make sure you have removed the `private` attribute from the [`package.json`](./package.json) file then run:
-
-```
-npm publish
-```
-
-If you are publishing a scoped plugin, i.e. `@username/homebridge-xxx` you will need to add `--access=public` to command the first time you publish.
-
-#### Publishing Beta Versions
-
-You can publish *beta* versions of your plugin for other users to test before you release it to everyone.
-
-```bash
-# create a new pre-release version (eg. 2.1.0-beta.1)
-npm version prepatch --preid beta
-
-# publsh to @beta
-npm publish --tag=beta
-```
-
-Users can then install the  *beta* version by appending `@beta` to the install command, for example:
-
-```
-sudo npm install -g homebridge-example-plugin@beta
-```
 
 # Disclaimer
 
