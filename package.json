@@ -1,6 +1,6 @@
 {
   "private": true,
-  "displayName": "Nilan Compact P",
+  "displayName": "Homebridge Nilan",
   "name": "homebridge-nilan",
   "version": "1.0.0",
   "description": "Homebridge plugin for Nilan Compact P.",
