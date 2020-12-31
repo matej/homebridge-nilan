@@ -1,4 +1,4 @@
-<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-color-round.png" height="70"> &nbsp;<img src="https://en.nilan.dk/Files/Billeder/Press/Nilan_logo.png" height="70" >
+<a href="https://homebridge.io"><img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-color-round.png" height="70" alt="Homebridge logo"></a> &nbsp;<a href="https://www.nilan.dk"><img src="https://en.nilan.dk/Files/Billeder/Press/Nilan_logo.png" height="70" alt="Nilan logo"></a>
 
 
 # Nilan Homebridge Plugin
@@ -10,12 +10,11 @@ This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) suppor
 
 **Apple Home App**
 
-<img src="resources/screenshots/1.png" height="300" > <img src="resources/screenshots/2.png" height="300" > <img src="resources/screenshots/3.png" height="300" > 
+<img src="resources/screenshots/1.png" height="300" alt="Screenshot Apple Home App"> <img src="resources/screenshots/2.png" height="300" alt="Screenshot Apple Home App"> <img src="resources/screenshots/3.png" height="300" alt="Screenshot Apple Home App"> 
 
 **Elgato Eve App**
 
-<img src="resources/screenshots/4.png" height="300" > <img src="resources/screenshots/5.png" height="300" >
-
+<img src="resources/screenshots/4.png" height="300" alt="Screenshot Elgato Eve App"> <img src="resources/screenshots/5.png" height="300" alt="Screenshot Elgato Eve App">
 
 ## Supported Devices
 
@@ -25,7 +24,7 @@ This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) suppor
 
 Note that the new CTS 700 touchscreen control panel uses a different version of the communication protocol and hence needs a different implementation.
 
-<img src="https://en.nilan.dk/Files/Billeder/Press/Nilan-Compact-P.jpg" height="120" >
+<img src="https://en.nilan.dk/Files/Billeder/Press/Nilan-Compact-P.jpg" height="120" alt="Nilan Compact P">
 
 ## Hardware Setup
 
