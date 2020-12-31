@@ -5,6 +5,9 @@
 
 This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) support for certain [Nilan](https://www.nilan.dk) devices via [Homebridge](https://homebridge.io).
 
+[![NPM Version](https://badgen.net/npm/v/homebridge-nilan)](https://www.npmjs.com/package/homebridge-nilan)
+![Build and Lint](https://github.com/matej/homebridge-nilan/workflows/Build%20and%20Lint/badge.svg)
+
 **Apple Home App**
 
 <img src="resources/screenshots/1.png" height="300" > <img src="resources/screenshots/2.png" height="300" > <img src="resources/screenshots/3.png" height="300" > 
