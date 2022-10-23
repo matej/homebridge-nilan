@@ -53,7 +53,7 @@ ip fire fil add chain=forward src-address=192.168.5.0/24 dst-address=192.168.1.0
 
 1. Install Homebridge by following [the official wiki](https://github.com/homebridge/homebridge/wiki).
 1. Install this plugin using [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x), or by running `npm install -g homebridge-nilan`.
-2. Add the configuration to your homebridge [config.json](https://github.com/homebridge/homebridge/wiki/Homebridge-Config-JSON-Explained).
+1. Add the configuration to your homebridge [config.json](https://github.com/homebridge/homebridge/wiki/Homebridge-Config-JSON-Explained).
 
 ## Configuration
 
@@ -134,7 +134,7 @@ This will launch an instance of Homebridge in debug mode which will restart ever
 
 # Disclaimer
 
-The plugin is based on the open Nilan Modbus protocol and only accesses user-level registers without needing any privileged access. While the plugin was extensively tested on the authors own hardware, there is no guarantees given that the it will perform without issues in other environments. Please proceed at your own risk.
+The plugin is based on the open Nilan Modbus protocol and only accesses user-level registers without needing any privileged access. While the plugin was extensively tested on the author's own hardware, there is no guarantees given that the it will perform without issues in other environments. Please proceed at your own risk.
 
 This plugin, or it's author is in no way associated with Nilan A/S.  
 
