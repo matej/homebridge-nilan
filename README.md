@@ -24,7 +24,7 @@ This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) suppor
 
 Note that the new CTS 700 touchscreen control panel uses a different version of the communication protocol and hence needs a different implementation.
 
-<img src="https://en.nilan.dk/Files/Billeder/Press/Nilan-Compact-P.jpg" height="120" alt="Nilan Compact P">
+<img src="resources/images/nilan-compact-p.png" height="120" alt="Nilan Compact P">
 
 ## Hardware Setup
 
