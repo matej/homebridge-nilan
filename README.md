@@ -1,4 +1,4 @@
-<a href="https://homebridge.io"><img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-color-round.png" height="70" alt="Homebridge logo"></a> &nbsp;<a href="https://www.nilan.dk"><img src="https://en.nilan.dk/Files/Billeder/Press/Nilan_logo.png" height="70" alt="Nilan logo"></a>
+<a href="https://homebridge.io"><img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-color-round.png" height="70" alt="Homebridge logo"></a> &nbsp;<a href="https://www.nilan.dk"><img src="resources/images/nilan-logo.png" height="70" alt="Nilan logo"></a>
 
 
 # Nilan Homebridge Plugin
