@@ -52,7 +52,7 @@ export class CompactPPlatformAccessory {
         .setCharacteristic(this.platform.Characteristic.FirmwareRevision, metadata.softwareVersion);
 
     } catch (e) {
-      this.platform.log.error('Could obtain device metadata after connection.', e.message);
+      this.platform.log.error('Could obtain device metadata after connection.', e instanceof Error ? e.message : '');
     }
   }
 
@@ -285,7 +285,7 @@ export class CompactPPlatformAccessory {
       this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, settings.roomTemperatureSetPoint);
       this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, settings.dhwTemperatureSetPoint);
     } catch (e) {
-      this.platform.log.error('Could not update readings and settings.', e.message);
+      this.platform.log.error('Could not update readings and settings.', e instanceof Error ? e.message : '');
     }
   }
 
