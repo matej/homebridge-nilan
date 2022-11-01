@@ -28,7 +28,7 @@ Note that the new CTS 700 touchscreen control panel uses a different version of 
 
 ## Hardware Setup
 
-Use the built-in network cable to connect the Compact P to your home network. The unit's default IP address is `192.168.5.107`. You need to make sure you can reach the Compact P from the device that is hosting the Homebridge server (e.g., your [Raspberry Pi](https://www.raspberrypi.org)). If the Homebridge device is on the same network you have to main options.
+Use the built-in network cable to connect the Compact P to your home network. The unit's default IP address is `192.168.5.107`. You need to make sure you can reach the Compact P from the device that is hosting the Homebridge server (e.g., your [Raspberry Pi](https://www.raspberrypi.org)). If the Homebridge device is on the same network you have at leasr two options.
 
 #### Adjust the Device IP
 
