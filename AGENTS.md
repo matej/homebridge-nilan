@@ -69,6 +69,9 @@ to real hardware.
 - Week-schedule support may write room temperature, hot-water temperature, and
   fan speed back to the unit. Do not exercise live writes without explicit user
   authorization and a known test device.
+- `npm run audit:cts700` is a read-only settings inventory. It deliberately
+  skips authentication, network identity, passwords, write-only registers, and
+  reset registers. Keep its JSON output out of commits.
 - Keep `config.schema.json`, `README.md`, and runtime configuration handling in
   sync when adding or changing user-facing options.
 - Do not assume access to a Nilan unit. Structure protocol changes so conversions
