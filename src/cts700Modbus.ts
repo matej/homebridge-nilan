@@ -145,10 +145,14 @@ export class CTS700Modbus {
   }
 
   async fetchActiveWeekProgramForDateTime(dateTime: DateTime): Promise<WeekScheduleRecord | null> {
-    const weekSchedule = await this.readWeekProgramRegister(Register.FirstWeekProgram, 14);
-    if (weekSchedule.length === 14) {
-      const secondWeekSchedule = await this.readWeekProgramRegister(Register.SecondWeekProgram, 14);
-      weekSchedule.push(...secondWeekSchedule);
+    const weekSchedule = Array<WeekScheduleRecord>();
+    const weekProgramRegisters = [Register.FirstWeekProgram, Register.SecondWeekProgram, Register.ThirdWeekProgram];
+    for (const register of weekProgramRegisters) {
+      const records = await this.readWeekProgramRegister(register, 14);
+      weekSchedule.push(...records);
+      if (records.length < 14) {
+        break;
+      }
     }
     return this.findCurrentActiveWeekRecord(weekSchedule, dateTime);
   }
@@ -311,7 +315,7 @@ export class CTS700Modbus {
   }
 
   public async writeDHWSetPoint(value: number): Promise<number> {
-    if (value < 5 || value > 65) {
+    if (value < 10 || value > 65) {
       throw Error('Value outside of acceptable range.');
     }
     return this.writeTemperatureRegister(Register.DHWTemperatureSetPoint, value);

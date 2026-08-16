@@ -160,7 +160,7 @@ export class CompactPPlatformAccessory {
     });
     dhwThermostatService.updateCharacteristic(c.TemperatureDisplayUnits, c.TemperatureDisplayUnits.CELSIUS);
     dhwThermostatService.getCharacteristic(c.TargetTemperature).setProps({
-      minValue: 5,
+      minValue: 10,
       maxValue: 65,
       minStep: 1,
     });

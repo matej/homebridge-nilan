@@ -45,6 +45,8 @@ export enum Register {
 	FistWeekProgram = FirstWeekProgram,
 	// Second 14 program records of Week Program.
 	SecondWeekProgram = 643,
+	// Third 14 program records of Week Program.
+	ThirdWeekProgram = 713,
 	// The MAC address for main board device.
 	// Reg1 Hi-byte: MAC 1-st byte
 	// Reg1 Lo-byte: MAC 2-nd byte
@@ -113,7 +115,7 @@ export interface Settings {
 	fanSpeed: number;
 	// Desired room temperature in C (5-40) times 10
 	roomTemperatureSetPoint: number;
-	// Desired DHW temperature in C (10-60) times 10
+	// Desired DHW temperature in C (10-65) times 10
 	dhwTemperatureSetPoint: number;
 	// Ventilation mode indicates automatic or forced aur conditioning operation
 	ventilationMode: VentilationMode;

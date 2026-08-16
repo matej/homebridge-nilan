@@ -15,8 +15,10 @@ type SetHandler = (value: CharacteristicValue, callback: CharacteristicSetCallba
 
 class FakeCharacteristic {
   public setHandler?: SetHandler;
+  public props?: Record<string, number>;
 
-  setProps(): this {
+  setProps(props: Record<string, number>): this {
+    this.props = props;
     return this;
   }
 
@@ -168,6 +170,15 @@ describe('CompactPPlatformAccessory', () => {
     expect(modbus.writeDHWPaused).toHaveBeenCalledWith(true);
     expect(modbus.writeVentilationPaused).toHaveBeenLastCalledWith(false);
     expect(modbus.writeVentilationMode).toHaveBeenCalledWith(VentilationMode.Heating);
+  });
+
+  it('uses the controller-supported DHW temperature range', () => {
+    const { Characteristic, services } = createHarness();
+
+    expect(services.get('compact-p-dhw')!.getCharacteristic(Characteristic.TargetTemperature).props).toMatchObject({
+      minValue: 10,
+      maxValue: 65,
+    });
   });
 
   it('polls readings and settings into HomeKit services', async () => {

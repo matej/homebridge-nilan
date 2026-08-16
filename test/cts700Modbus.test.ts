@@ -279,6 +279,38 @@ describe('CTS700Modbus reads', () => {
     expect(client.readHoldingRegisters).toHaveBeenCalledWith(Register.SecondWeekProgram, 70);
   });
 
+  it('reads and selects records from the third segment of a full week program', async () => {
+    const modbus = await createModbus();
+    const fullSegment = Array.from({ length: 14 }, (_, hour) => ({
+      weekDay: 1,
+      hour,
+      minute: 0,
+      temperature: 20,
+      dhwTemperature: 48,
+      flags: 0,
+      fanSpeed: 40,
+    }));
+    client.readHoldingRegisters.mockImplementation(async (address: number) => {
+      if (address === Register.ThirdWeekProgram) {
+        return scheduleResult([
+          { weekDay: 7, hour: 23, minute: 0, temperature: 22, dhwTemperature: 52, flags: 0, fanSpeed: 70 },
+        ]);
+      }
+      return scheduleResult(fullSegment);
+    });
+
+    await expect(modbus.fetchActiveWeekProgramForDateTime({
+      second: 0,
+      minute: 30,
+      hour: 23,
+      day: 1,
+      weekDay: 7,
+      month: 1,
+      year: 26,
+    })).resolves.toMatchObject({ weekDay: 7, hour: 23, fanSpeed: 70 });
+    expect(client.readHoldingRegisters).toHaveBeenCalledWith(Register.ThirdWeekProgram, 70);
+  });
+
   it('rejects reads while disconnected', async () => {
     const modbus = await createModbus();
     (modbus as unknown as { client: null }).client = null;
@@ -309,7 +341,8 @@ describe('CTS700Modbus writes', () => {
   it.each([
     ['fan speed', () => createModbus().then((modbus) => modbus.writeFanSpeed(101))],
     ['room temperature', () => createModbus().then((modbus) => modbus.writeRoomTemperatureSetPoint(4.5))],
-    ['DHW temperature', () => createModbus().then((modbus) => modbus.writeDHWSetPoint(66))],
+    ['low DHW temperature', () => createModbus().then((modbus) => modbus.writeDHWSetPoint(9.5))],
+    ['high DHW temperature', () => createModbus().then((modbus) => modbus.writeDHWSetPoint(66))],
     ['pause option', () => createModbus().then((modbus) => modbus.writePauseOption(99 as PauseOption))],
     ['ventilation mode', () => createModbus().then((modbus) => modbus.writeVentilationMode(99 as VentilationMode))],
   ])('rejects an invalid %s', async (_name, operation) => {
