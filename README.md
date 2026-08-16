@@ -86,7 +86,7 @@ The `schedule` option should be enabled, if you have a week schedule programmed 
 
 ## Setup Development Environment
 
-This plugin requires Node.js 12 or later and a modern code editor such as [VS Code](https://code.visualstudio.com/). It uses [TypeScript](https://www.typescriptlang.org/) and comes with pre-configured settings for [VS Code](https://code.visualstudio.com/) and ESLint. If you are using VS Code install these extensions:
+This plugin requires Node.js 22 or 24 and a modern code editor such as [VS Code](https://code.visualstudio.com/). It uses [TypeScript](https://www.typescriptlang.org/) and comes with pre-configured settings for [VS Code](https://code.visualstudio.com/) and ESLint. If you are using VS Code install these extensions:
 
 * [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
 
@@ -139,4 +139,3 @@ The plugin is based on the open Nilan Modbus protocol and only accesses user-lev
 This plugin, or it's author is in no way associated with Nilan A/S.  
 
 Nilan is a registered trademark of [Nilan A/S]((https://www.nilan.dk)).
-

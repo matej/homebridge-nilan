@@ -4,8 +4,8 @@ import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { CompactPPlatformAccessory } from './compactPAccessory';
 
 export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
-  public readonly Service: typeof Service = this.api.hap.Service;
-  public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
+  public readonly Service: typeof Service;
+  public readonly Characteristic: typeof Characteristic;
 
   // This is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
@@ -15,6 +15,8 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
+    this.Service = api.hap.Service;
+    this.Characteristic = api.hap.Characteristic;
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
