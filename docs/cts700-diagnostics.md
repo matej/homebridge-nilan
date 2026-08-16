@@ -21,10 +21,21 @@ The single-line JSON result includes:
 - register 1047, decoded as the system working mode;
 - user targets from registers 4746, 4747, and 5548;
 - actual inlet and outlet fan control values from registers 4699 and 4700;
+- fan type and the configured CAV inlet/outlet offset;
+- forced-operation and current-regulation modes;
+- humidity, outdoor-temperature, and related automatic fan settings;
+- computed differences between schedule, user, inlet, and outlet fan values;
 - the active and next records selected from the three week-program segments;
 - raw temperature register values alongside their Celsius decoding.
 
 Use `--help` to see the optional TCP port and unit ID arguments.
+Watch mode opens a fresh connection for every snapshot because some CTS700
+firmware closes an idle Modbus TCP connection between samples.
+
+Some administrative fan settings require CTS700 authentication. The diagnostic
+tool does not authenticate because that protocol step is not read-only; those
+addresses are instead listed under `unsupportedRegisters` and their decoded
+values remain `null`.
 
 ## Capture a manual override and schedule transition
 

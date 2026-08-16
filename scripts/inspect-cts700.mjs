@@ -3,15 +3,30 @@
 import ModbusRTU from 'modbus-serial';
 
 const registers = Object.freeze({
+  fanType: 1043,
   systemWorkingMode: 1047,
+  forcedOperationMode: 2402,
+  lowOutdoorFanSettings: 2795,
+  humidityFanSettings: 3265,
+  cavFanOffset: 3422,
   inletFanControl: 4699,
-  outletFanControl: 4700,
+  actualHumidity: 4716,
   currentTime: 4722,
   roomTemperatureSetPoint: 4746,
-  fanSpeed: 4747,
+  masterSensorTemperature: 5088,
+  outdoorTemperature: 5152,
+  regulationMode: 5432,
   dhwTemperatureSetPoint: 5548,
   weekPrograms: [573, 643, 713],
 });
+
+const fanTypeNames = Object.freeze([
+  'ONE_STEP',
+  'TWO_STEP',
+  'CAV_EXTERNAL',
+  'CAV',
+  'VAV',
+]);
 
 const workingModeNames = Object.freeze([
   'IDLE',
@@ -21,6 +36,9 @@ const workingModeNames = Object.freeze([
   'LON',
   'SERVICE',
 ]);
+
+const forcedOperationModeNames = Object.freeze(['AUTO', 'COOLING', 'HEATING']);
+const regulationModeNames = Object.freeze(['UNDEFINED', 'COOLING', 'HEATING', 'VENTILATION', 'HOT_WATER']);
 
 const scheduleFlagNames = Object.freeze([
   [6, 'DEHUMIDIFICATION'],
@@ -119,8 +137,33 @@ async function readSingleRegister(client, address) {
   return (await readHoldingRegisters(client, address, 1)).data[0];
 }
 
+function isIllegalDataAddress(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return error?.modbusCode === 2 || message.includes('Illegal data address');
+}
+
+async function readOptionalHoldingRegisters(client, address, count, unsupportedRegisters) {
+  try {
+    return await readHoldingRegisters(client, address, count);
+  } catch (error) {
+    if (!isIllegalDataAddress(error)) {
+      throw error;
+    }
+    unsupportedRegisters.push({ address, count });
+    return null;
+  }
+}
+
+async function readOptionalSingleRegister(client, address, unsupportedRegisters) {
+  return (await readOptionalHoldingRegisters(client, address, 1, unsupportedRegisters))?.data[0] ?? null;
+}
+
 function decodeTemperature(raw) {
-  return ((raw << 16) >> 16) / 10;
+  return decodeSigned16(raw) / 10;
+}
+
+function decodeSigned16(raw) {
+  return (raw << 16) >> 16;
 }
 
 function decodeDateTime(buffer) {
@@ -199,14 +242,38 @@ function findNextScheduleRecord(records, dateTime) {
 }
 
 async function captureSnapshot(client) {
+  const unsupportedRegisters = [];
   const currentDateTime = decodeDateTime((await readHoldingRegisters(client, registers.currentTime, 4)).buffer);
+  const fanType = await readOptionalSingleRegister(client, registers.fanType, unsupportedRegisters);
   const systemWorkingMode = await readSingleRegister(client, registers.systemWorkingMode);
-  const roomTemperatureSetPointRaw = await readSingleRegister(client, registers.roomTemperatureSetPoint);
-  const fanSpeed = await readSingleRegister(client, registers.fanSpeed);
+  const forcedOperationMode = await readSingleRegister(client, registers.forcedOperationMode);
+  const lowOutdoorFanSettings = (await readOptionalHoldingRegisters(
+    client,
+    registers.lowOutdoorFanSettings,
+    5,
+    unsupportedRegisters,
+  ))?.data ?? null;
+  const humidityFanSettings = (await readOptionalHoldingRegisters(
+    client,
+    registers.humidityFanSettings,
+    3,
+    unsupportedRegisters,
+  ))?.data ?? null;
+  const cavFanOffsetRaw = await readOptionalSingleRegister(client, registers.cavFanOffset, unsupportedRegisters);
+  const cavFanOffset = cavFanOffsetRaw === null ? null : decodeSigned16(cavFanOffsetRaw);
+  const fanControl = (await readHoldingRegisters(client, registers.inletFanControl, 2)).data;
+  const actualHumidity = await readSingleRegister(client, registers.actualHumidity);
+  const userVentilationTargets = (await readHoldingRegisters(client, registers.roomTemperatureSetPoint, 2)).data;
+  const roomTemperatureSetPointRaw = userVentilationTargets[0];
+  const fanSpeed = userVentilationTargets[1];
+  const masterSensorTemperatureRaw = await readSingleRegister(client, registers.masterSensorTemperature);
+  const outdoorTemperatureRaw = await readSingleRegister(client, registers.outdoorTemperature);
+  const regulationMode = await readSingleRegister(client, registers.regulationMode);
   const dhwTemperatureSetPointRaw = await readSingleRegister(client, registers.dhwTemperatureSetPoint);
-  const inletFanControl = await readSingleRegister(client, registers.inletFanControl);
-  const outletFanControl = await readSingleRegister(client, registers.outletFanControl);
   const schedule = await readWeekSchedule(client);
+  const activeScheduleRecord = findActiveScheduleRecord(schedule, currentDateTime);
+  const inletFanControl = fanControl[0];
+  const outletFanControl = fanControl[1];
 
   return {
     capturedAt: new Date().toISOString(),
@@ -214,6 +281,14 @@ async function captureSnapshot(client) {
     systemWorkingMode: {
       raw: systemWorkingMode,
       name: workingModeNames[systemWorkingMode] ?? 'UNKNOWN',
+    },
+    forcedOperationMode: {
+      raw: forcedOperationMode,
+      name: forcedOperationModeNames[forcedOperationMode] ?? 'UNKNOWN',
+    },
+    regulationMode: {
+      raw: regulationMode,
+      name: regulationModeNames[regulationMode] ?? 'UNKNOWN',
     },
     userTargets: {
       roomTemperature: decodeTemperature(roomTemperatureSetPointRaw),
@@ -226,9 +301,43 @@ async function captureSnapshot(client) {
       inlet: inletFanControl,
       outlet: outletFanControl,
     },
-    activeScheduleRecord: findActiveScheduleRecord(schedule, currentDateTime),
+    fanConfiguration: {
+      fanType: {
+        raw: fanType,
+        name: fanType === null ? 'UNSUPPORTED' : fanTypeNames[fanType] ?? 'UNKNOWN',
+      },
+      cavFanOffset,
+      lowOutdoorFan: {
+        enabled: lowOutdoorFanSettings === null ? null : lowOutdoorFanSettings[0] === 1,
+        temperature: lowOutdoorFanSettings === null ? null : decodeTemperature(lowOutdoorFanSettings[1]),
+        speed: lowOutdoorFanSettings?.[2] ?? null,
+      },
+      highCoolingFan: {
+        enabled: lowOutdoorFanSettings === null ? null : lowOutdoorFanSettings[3] === 1,
+        speed: lowOutdoorFanSettings?.[4] ?? null,
+      },
+      humidity: {
+        lowThreshold: humidityFanSettings?.[0] ?? null,
+        lowSpeed: humidityFanSettings?.[1] ?? null,
+        highSpeed: humidityFanSettings?.[2] ?? null,
+      },
+    },
+    currentConditions: {
+      humidity: actualHumidity,
+      masterSensorTemperature: decodeTemperature(masterSensorTemperatureRaw),
+      outdoorTemperature: decodeTemperature(outdoorTemperatureRaw),
+    },
+    fanComparison: {
+      scheduleMinusUser: activeScheduleRecord === null ? null : activeScheduleRecord.fanSpeed - fanSpeed,
+      inletMinusUser: inletFanControl - fanSpeed,
+      outletMinusUser: outletFanControl - fanSpeed,
+      outletMinusInlet: outletFanControl - inletFanControl,
+      outletMinusInletMatchesCavOffset: cavFanOffset === null ? null : outletFanControl - inletFanControl === cavFanOffset,
+    },
+    activeScheduleRecord,
     nextScheduleRecord: findNextScheduleRecord(schedule, currentDateTime),
     scheduleRecordCount: schedule.length,
+    unsupportedRegisters,
   };
 }
 
@@ -238,26 +347,25 @@ function delay(milliseconds) {
 
 async function main() {
   const options = parseOptions(process.argv.slice(2));
-  const client = new ModbusRTU();
   let stopped = false;
   process.once('SIGINT', () => {
     stopped = true;
   });
 
-  try {
-    await client.connectTCP(options.host, { port: options.port });
-    client.setID(options.unitId);
-    client.setTimeout(5000);
-
-    for (let captured = 0; !stopped && (options.count === 0 || captured < options.count); captured++) {
+  for (let captured = 0; !stopped && (options.count === 0 || captured < options.count); captured++) {
+    const client = new ModbusRTU();
+    try {
+      await client.connectTCP(options.host, { port: options.port });
+      client.setID(options.unitId);
+      client.setTimeout(5000);
       process.stdout.write(`${JSON.stringify(await captureSnapshot(client))}\n`);
-      if (!stopped && (options.count === 0 || captured + 1 < options.count)) {
-        await delay(options.intervalSeconds * 1000);
+    } finally {
+      if (client.isOpen) {
+        client.close();
       }
     }
-  } finally {
-    if (client.isOpen) {
-      client.close();
+    if (!stopped && (options.count === 0 || captured + 1 < options.count)) {
+      await delay(options.intervalSeconds * 1000);
     }
   }
 }
