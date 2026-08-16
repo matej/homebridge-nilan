@@ -126,8 +126,10 @@ export class CTS700Modbus {
       outdoorTemperature: await this.readTemperatureRegister(Register.OutdoorTemperature),
       panelTemperature: await this.readTemperatureRegister(Register.PanelTemperature),
       actualHumidity: await this.readPercentageRegister(Register.ActualHumidity),
-      inletFilterDeterioration: await this.readPercentageRegister(Register.InletFilterDeterioration),
-      outletFilterDeterioration: await this.readPercentageRegister(Register.OutletFilterDeterioration),
+      inletFilterReplacementInterval: await this.readFilterReplacementInterval(Register.InletFilterReplacementInterval),
+      inletFilterElapsedDays: await this.readFilterElapsedDays(Register.InletFilterElapsedDays),
+      outletFilterReplacementInterval: await this.readFilterReplacementInterval(Register.OutletFilterReplacementInterval),
+      outletFilterElapsedDays: await this.readFilterElapsedDays(Register.OutletFilterElapsedDays),
       dhwTankTopTemperature: await this.readTemperatureRegister(Register.DHWTopTankTemperature),
       currentDateTime: await this.readDateTimeRegister(Register.CurrentTime),
     };
@@ -175,6 +177,26 @@ export class CTS700Modbus {
       .then((result) => {
         if (result < 0 || result > 100) {
           throw Error('Value outside of acceptable range.');
+        }
+        return result;
+      });
+  }
+
+  private async readFilterReplacementInterval(register: Register): Promise<number> {
+    return this.readSingleRegister(register)
+      .then((result) => {
+        if (result < 30 || result > 360) {
+          throw Error('Filter replacement interval outside of acceptable range.');
+        }
+        return result;
+      });
+  }
+
+  private async readFilterElapsedDays(register: Register): Promise<number> {
+    return this.readSingleRegister(register)
+      .then((result) => {
+        if (result > 360) {
+          throw Error('Filter elapsed time outside of acceptable range.');
         }
         return result;
       });

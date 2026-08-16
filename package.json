@@ -24,6 +24,7 @@
   ],
   "scripts": {
     "check": "npm run lint && npm run build && npm test",
+    "audit:cts700": "node scripts/dump-cts700-settings.mjs",
     "diagnose:cts700": "node scripts/inspect-cts700.mjs",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run --coverage",

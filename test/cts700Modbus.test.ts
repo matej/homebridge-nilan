@@ -136,8 +136,10 @@ describe('CTS700Modbus reads', () => {
         [Register.OutdoorTemperature, 0xffc9],
         [Register.PanelTemperature, 203],
         [Register.ActualHumidity, 48],
-        [Register.InletFilterDeterioration, 25],
-        [Register.OutletFilterDeterioration, 100],
+        [Register.InletFilterReplacementInterval, 90],
+        [Register.InletFilterElapsedDays, 59],
+        [Register.OutletFilterReplacementInterval, 90],
+        [Register.OutletFilterElapsedDays, 90],
         [Register.DHWTopTankTemperature, 521],
       ]);
       if (address === Register.CurrentTime) {
@@ -151,8 +153,10 @@ describe('CTS700Modbus reads', () => {
       outdoorTemperature: -5.5,
       panelTemperature: 20.3,
       actualHumidity: 48,
-      inletFilterDeterioration: 25,
-      outletFilterDeterioration: 100,
+      inletFilterReplacementInterval: 90,
+      inletFilterElapsedDays: 59,
+      outletFilterReplacementInterval: 90,
+      outletFilterElapsedDays: 90,
       dhwTankTopTemperature: 52.1,
       currentDateTime: {
         second: 30,
