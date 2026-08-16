@@ -1,18 +1,42 @@
-<a href="https://homebridge.io"><img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-color-round.png" height="70" alt="Homebridge logo"></a> &nbsp;<a href="https://www.nilan.dk"><img src="resources/images/nilan-logo.png" height="70" alt="Nilan logo"></a>
+<p align="center">
+  <a href="https://homebridge.io"><img src="https://raw.githubusercontent.com/homebridge/branding/latest/logos/homebridge-color-round.png" height="70" alt="Homebridge logo"></a>
+  &nbsp;
+  <a href="https://www.nilan.dk"><img src="resources/images/nilan-logo.png" height="70" alt="Nilan logo"></a>
+</p>
 
+# Homebridge Nilan
 
-# Nilan Homebridge Plugin
-
-This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) support for certain [Nilan](https://www.nilan.dk) devices via [Homebridge](https://homebridge.io).
+A [Homebridge](https://homebridge.io) dynamic-platform plugin that exposes a
+compatible [Nilan](https://www.nilan.dk) Compact P ventilation system to Apple
+Home. It communicates directly with the older CTS 700 controller over Modbus
+TCP; no cloud service is required.
 
 [![NPM Version](https://badgen.net/npm/v/homebridge-nilan)](https://www.npmjs.com/package/homebridge-nilan)
 [![CI](https://github.com/matej/homebridge-nilan/actions/workflows/build.yml/badge.svg)](https://github.com/matej/homebridge-nilan/actions/workflows/build.yml)
 
-**Apple Home App**
+## Compatibility
+
+| Component | Supported versions |
+| --- | --- |
+| Nilan controller | Compact P with the older, non-touchscreen CTS 700 panel |
+| Homebridge | 1.8 or 2.x |
+| Node.js | 22.10 or newer in the 22.x or 24.x release lines |
+| Connection | Modbus TCP, port 502 |
+
+The newer CTS 700 touchscreen panel uses a different protocol and is **not
+supported**.
+
+The plugin exposes ventilation state and fan speed, room temperature and target,
+domestic hot-water state and target, relative humidity, and outdoor and panel
+temperature. It polls the controller every 10 seconds.
+
+## Screenshots
+
+### Apple Home
 
 <img src="resources/screenshots/1.png" height="300" alt="Screenshot Apple Home App"> <img src="resources/screenshots/2.png" height="300" alt="Screenshot Apple Home App"> <img src="resources/screenshots/3.png" height="300" alt="Screenshot Apple Home App"> 
 
-**Elgato Eve App**
+### Eve
 
 <img src="resources/screenshots/4.png" height="300" alt="Screenshot Elgato Eve App"> <img src="resources/screenshots/5.png" height="300" alt="Screenshot Elgato Eve App">
 
@@ -20,120 +44,141 @@ This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) suppor
 
 ### Compact P
 
-[Compact P](https://www.nilan.dk/produkter/ventilation-med-opvarmning/ventilation-og-varmt-brugsvand/compact-p) ventilation and heating system with the CTS 700 control panel (older **non-touchscreen** version). The implementation is based on the [Modbus Registers Description document, dated 20150826](http://www.nilan.de/Admin/Public/Download.aspx?File=Files%2FFiler%2FDownload%2FFrench%2FDocumentation%2FGuide+dutilisation%2FModbus+CTS+700%2FModbus_Registers_Description_CTS700.pdf).
-
-Note that the new CTS 700 touchscreen control panel uses a different version of the communication protocol and hence needs a different implementation.
+[Compact P](https://www.nilan.dk/produkter/ventilation-med-opvarmning/ventilation-og-varmt-brugsvand/compact-p)
+ventilation and heating system with the older CTS 700 control panel. The
+implementation follows Nilan's *Modbus Registers Description* for CTS 700,
+dated 2015-08-26.
 
 <img src="resources/images/nilan-compact-p.png" height="200" alt="Nilan Compact P">
 
 ## Hardware Setup
 
-Use the built-in network cable to connect the Compact P to your home network. The unit's default IP address is `192.168.5.107`. You need to make sure you can reach the Compact P from the device that is hosting the Homebridge server (e.g., your [Raspberry Pi](https://www.raspberrypi.org)). If the Homebridge device is on the same network you have at least two options.
+Use the built-in network connection to connect the Compact P to your home
+network. Its default IP address is `192.168.5.107`. The machine running
+Homebridge must be able to reach that address on TCP port 502.
 
 ### Adjust the Device IP
 
-Adjust the Compact P network settings via the CTS 700 control panel. First switch to Super User mode (`Settings > Change user level`), then adjust the IP Address, Network mask and Network gateway to match your network configuration (using `Settings > Network settings`). Be sure to select a free IP address on your network that is outside of any DHCP server IP ranges.
+Adjust the Compact P network settings through the CTS 700 control panel. Switch
+to Super User mode under `Settings > Change user level`, then update the IP
+address, network mask, and gateway under `Settings > Network settings`. Reserve
+the address in your router or choose one outside its DHCP pool to avoid address
+conflicts.
 
 ### Add Second Subnet (Advanced)
 
-Adjust your router configuration to connect your current subnet to `192.168.1.0/24`. With this you can leave the default device settings and reach `192.168.5.107` from the rest of your network. 
+Alternatively, route your existing network to the Compact P's
+`192.168.5.0/24` subnet. This lets you keep the controller's default address.
 
-The exact details will differ depending on your router and IP range. Here's an example with `192.168.1.0/24` as the current subnet and a MikroTik router:
+The exact configuration depends on your router. For example, with a MikroTik
+router and `192.168.1.0/24` as the existing LAN:
 
-```
+```text
 ip address add interface=bridge1 address=192.168.5.1/24
+ip firewall filter add chain=forward src-address=192.168.1.0/24 dst-address=192.168.5.0/24 action=accept
+ip firewall filter add chain=forward src-address=192.168.5.0/24 dst-address=192.168.1.0/24 action=accept
 ```
 
-```
-ip fire fil add chain=forward src-address=192.168.1.0/24 dst-address=192.168.5.0/24 action=accept
-ip fire fil add chain=forward src-address=192.168.5.0/24 dst-address=192.168.1.0/24 action=accept
-```
+Only change routing and firewall rules if you understand their effect on your
+network.
 
 ## Software Setup
 
-1. Install Homebridge by following [the official wiki](https://github.com/homebridge/homebridge/wiki).
-1. Install this plugin using [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x), or by running `npm install -g homebridge-nilan`.
-1. Add the configuration to your homebridge [config.json](https://github.com/homebridge/homebridge/wiki/Homebridge-Config-JSON-Explained).
+1. Install Homebridge using the [official instructions](https://github.com/homebridge/homebridge/wiki).
+2. In [Homebridge UI](https://github.com/homebridge/homebridge-config-ui-x), search for `Homebridge Nilan` and select **Install**. Alternatively, run `npm install -g homebridge-nilan`.
+3. Configure the plugin in Homebridge UI, then restart Homebridge.
 
 ## Configuration
 
-This plugin supports [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x). You can use the web interface to configure all settings.
+Homebridge UI is the recommended way to configure the plugin. It validates the
+device IP address and writes the platform entry for you.
 
-Alternatively you can enable the plugin manually in [config.json](https://github.com/homebridge/homebridge/wiki/Homebridge-Config-JSON-Explained). Here's an example entry in the platforms array:
+For manual configuration, add an entry to the `platforms` array in Homebridge's
+[`config.json`](https://github.com/homebridge/homebridge/wiki/Homebridge-Config-JSON-Explained):
 
 ```json
-"platforms": [
+{
+  "platforms": [
     {
-        "devices": [
-            {
-                "name": "Compact P",
-                "host": "192.168.5.107",
-                "schedule": true
-            }
-        ],
-        "platform": "Nilan"
+      "platform": "Nilan",
+      "devices": [
+        {
+          "name": "Compact P",
+          "host": "192.168.5.107",
+          "schedule": true
+        }
+      ]
     }
-]
+  ]
+}
 ```
 
-Be sure to update the `host` parameter to match your device (if you changed the IP). 
+| Option | Required | Description |
+| --- | --- | --- |
+| `platform` | Yes | Must remain `Nilan`. |
+| `devices` | Yes | One or more Compact P controller definitions. |
+| `devices[].name` | Yes | Display name for the HomeKit accessory. |
+| `devices[].host` | Yes | IPv4 address of the controller. |
+| `devices[].schedule` | No | Synchronize setpoints and fan speed with the CTS 700 week program; defaults to `true`. |
+
+Give each configured device a unique IP address. If you change a device's
+`host`, Homebridge treats it as a new accessory because the IP address is part
+of its persistent identity.
 
 ### Schedule
 
-The `schedule` option should be enabled if you have a week schedule programmed on your control unit. The option ensures that the values reported in HomeKit update when the week program changes. Otherwise HomeKit just reflects the last user-set value.
+Enable `schedule` when a week program is active on the controller. The plugin
+then keeps HomeKit's room-temperature target, hot-water target, and fan speed in
+sync with the active schedule entry. This synchronization can write those three
+values back to the controller. Set the option to `false` if no week program is
+configured or if HomeKit should retain the last manually selected values.
+
+## Troubleshooting
+
+- Confirm that the Homebridge host can reach the controller's IP address and TCP
+  port 502.
+- Confirm that the panel is the older, non-touchscreen CTS 700 model.
+- Check that every device has a unique `host` value and that no other Modbus
+  client is monopolizing the connection.
+- Run Homebridge in debug mode and include the relevant logs, with addresses and
+  credentials removed, when opening an issue.
 
 ## Developer Notes
 
-### Setup Development Environment
+Use Node.js 22 or 24. The repository's `.nvmrc` selects Node.js 22.
 
-This plugin requires Node.js 22 or 24 and a modern code editor such as [VS Code](https://code.visualstudio.com/). It uses [TypeScript](https://www.typescriptlang.org/) and comes with pre-configured settings for [VS Code](https://code.visualstudio.com/) and ESLint. If you are using VS Code install these extensions:
-
-* [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
-
-### Install Development Dependencies
-
-Using a terminal, navigate to the project folder and run this command to install the development dependencies:
-
-```
+```sh
+nvm use
 npm ci
+npm run check
 ```
 
-### Build Plugin
+The combined check lints the project, performs a strict TypeScript build, and
+runs the mocked Vitest suite with coverage. Individual commands are also
+available:
 
-TypeScript needs to be compiled into JavaScript before it can run. The following command will compile the contents of your [`src`](./src) directory and put the resulting code into the `dist` folder.
-
-```
+```sh
+npm run lint
 npm run build
+npm test
 ```
 
-### Link to Homebridge
+For explicitly prepared local hardware development only:
 
-Run this command so your global install of Homebridge can discover the plugin in your development environment:
-
-```
-npm link
-```
-
-You can now start Homebridge, use the `-D` flag so you can see debug log messages in your plugin:
-
-```
-homebridge -D
-```
-
-### Watch for Changes and Build Automatically
-
-If you want to have your code compile automatically as you make changes, and restart Homebridge automatically between changes you can run:
-
-```
+```sh
 npm run watch
 ```
 
-This will launch an instance of Homebridge in debug mode which will restart every time you make a change to the source code. It will load the config stored in the default location under `~/.homebridge`. You may need to stop other running instances of Homebridge while using this command to prevent conflicts. You can adjust the Homebridge startup command in the [`nodemon.json`](./nodemon.json) file.
+This command links the package and launches Homebridge in debug mode using the
+default `~/.homebridge` configuration. It may connect to and write to a real
+controller, so do not use it as routine validation.
 
 ## Contributing and Security
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidance.
-Report security-sensitive issues according to [SECURITY.md](SECURITY.md), not in a public issue.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidance
+and [AGENTS.md](AGENTS.md) for architecture and protocol invariants. Report
+security-sensitive issues according to [SECURITY.md](SECURITY.md), not in a
+public issue.
 
 ## Disclaimer
 
