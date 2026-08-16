@@ -62,3 +62,19 @@ the resulting `.ndjson` file after checking that its setpoint values are not
 sensitive; it contains no credentials or controller MAC address.
 
 For a finite five-minute capture, use `--interval 10 --count 30`.
+
+## Observed override behavior
+
+Read-only captures around a real week-schedule transition established that the
+CTS700 retains the user fan target in register 4747 while applying the active
+schedule value to inlet-fan output register 4699. System working mode 1047
+remained `AUTO` before and after the transition. Consequently, working mode does
+not identify whether a scheduled or temporary user target is currently active.
+
+The plugin therefore treats changes to user registers as overrides whether they
+originate in HomeKit, the control-unit UI, or another Modbus client. Overrides
+remain active until the selected schedule record changes. For fan speed only,
+register 4699 can corroborate an override after restart or when the UI reapplies
+the existing register 4747 value. It is not treated as a target because automatic
+humidity, cooling, fan balancing, and other controller functions can modify the
+actual output.

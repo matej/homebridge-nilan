@@ -130,10 +130,14 @@ of its persistent identity.
 ### Schedule
 
 Enable `schedule` when a week program is active on the controller. The plugin
-reads the controller's working mode: automatic operation is displayed using the
-active schedule entry, while manual and other modes use the controller's user
-setpoints. Schedule synchronization is read-only; only explicit HomeKit actions
-write to the controller. Set the option to `false` if no week program is configured.
+reads the active entry and never writes its values back to the user registers.
+The CTS 700 keeps scheduled and user targets separately: a change from HomeKit,
+the control-unit UI, or another Modbus client temporarily overrides the active
+schedule without leaving automatic working mode, and the next schedule entry
+resumes control. The plugin tracks those changes independently for fan, room,
+and hot-water targets. It uses the inlet fan output as a limited fan-only hint
+after startup or when the UI reapplies an unchanged value. Set the option to
+`false` if no week program is configured.
 
 ## Troubleshooting
 

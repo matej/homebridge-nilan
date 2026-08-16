@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { DateTime, OperationMode, PauseOption, SystemWorkingMode, VentilationMode, WeekScheduleRecord } from './cts700Data';
 import { CTS700Modbus } from './cts700Modbus';
+import { CTS700TargetResolver, UserTargets, UserTarget } from './cts700TargetResolver';
 import type { NilanHomebridgePlatform } from './platform';
 
 type WriterParameter = boolean | number | PauseOption | VentilationMode;
@@ -23,6 +24,7 @@ export class CompactPPlatformAccessory {
 
   private processedDateTime?: DateTime;
   private processedSchedule: WeekScheduleRecord | null = null;
+  private readonly targetResolver = new CTS700TargetResolver();
 
   constructor(
     private readonly platform: NilanHomebridgePlatform,
@@ -98,7 +100,7 @@ export class CompactPPlatformAccessory {
 
     ventilationFanService.getCharacteristic(c.RotationSpeed)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.handleWrite(next => this.cts700Modbus.writeFanSpeed(next), value as number, 'Rotation speed', callback);
+        this.handleTargetWrite('fanSpeed', next => this.cts700Modbus.writeFanSpeed(next), value as number, 'Rotation speed', callback);
       });
 
     ventilationFanService.getCharacteristic(c.Active)
@@ -126,7 +128,13 @@ export class CompactPPlatformAccessory {
 
     ventilationThermostatService.getCharacteristic(c.TargetTemperature)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.handleWrite(next => this.cts700Modbus.writeRoomTemperatureSetPoint(next), value as number, 'Room temperature', callback);
+        this.handleTargetWrite(
+          'roomTemperature',
+          next => this.cts700Modbus.writeRoomTemperatureSetPoint(next),
+          value as number,
+          'Room temperature',
+          callback,
+        );
       });
     
     ventilationThermostatService.getCharacteristic(c.TargetHeatingCoolingState)
@@ -183,7 +191,13 @@ export class CompactPPlatformAccessory {
 
     dhwThermostatService.getCharacteristic(c.TargetTemperature)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.handleWrite(next => this.cts700Modbus.writeDHWSetPoint(next), value as number, 'DHW temperature', callback);
+        this.handleTargetWrite(
+          'dhwTemperature',
+          next => this.cts700Modbus.writeDHWSetPoint(next),
+          value as number,
+          'DHW temperature',
+          callback,
+        );
       });
 
     dhwThermostatService.getCharacteristic(c.TargetHeatingCoolingState)
@@ -282,12 +296,15 @@ export class CompactPPlatformAccessory {
       const settings = await this.cts700Modbus.fetchSettings();
       this.platform.log.debug('Updating with settings:', settings);
 
-      let displayedFanSpeed = settings.fanSpeed;
-      let displayedRoomTemperatureSetPoint = settings.roomTemperatureSetPoint;
-      let displayedDHWTemperatureSetPoint = settings.dhwTemperatureSetPoint;
+      const userTargets: UserTargets = {
+        fanSpeed: settings.fanSpeed,
+        roomTemperature: settings.roomTemperatureSetPoint,
+        dhwTemperature: settings.dhwTemperatureSetPoint,
+      };
 
       const shouldReadSchedule = this.accessory.context.device.schedule !== false &&
         settings.systemWorkingMode === SystemWorkingMode.Auto;
+      let displayedTargets;
       if (shouldReadSchedule) {
         // The schedule only has minute precision, so reuse the active record within the same controller minute.
         const normalizedDateTime = { ...readings.currentDateTime, second: 0 };
@@ -297,14 +314,14 @@ export class CompactPPlatformAccessory {
           this.processedDateTime = normalizedDateTime;
         }
 
-        if (this.processedSchedule !== null) {
-          displayedFanSpeed = this.processedSchedule.fanSpeed;
-          displayedRoomTemperatureSetPoint = this.processedSchedule.temperature;
-          displayedDHWTemperatureSetPoint = this.processedSchedule.dhwTemperature;
-          this.platform.log.debug('Using automatic week schedule targets:', this.processedSchedule);
-        } else {
-          this.platform.log.debug('No active week schedule entry found; using user targets.');
-        }
+        displayedTargets = this.targetResolver.resolveAutomaticTargets(
+          userTargets,
+          this.processedSchedule,
+          readings.inletFanControl,
+        );
+        this.platform.log.debug('Resolved automatic targets:', displayedTargets);
+      } else {
+        displayedTargets = this.targetResolver.useUserTargets(userTargets);
       }
 
       if (settings.paused === PauseOption.Ventilation || settings.paused === PauseOption.All) {
@@ -347,9 +364,9 @@ export class CompactPPlatformAccessory {
         this.dhwThermostatService.updateCharacteristic(c.TargetHeatingCoolingState, c.TargetHeatingCoolingState.HEAT); 
       }
 
-      this.ventilationFanService.updateCharacteristic(c.RotationSpeed, displayedFanSpeed);
-      this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, displayedRoomTemperatureSetPoint);
-      this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, displayedDHWTemperatureSetPoint);
+      this.ventilationFanService.updateCharacteristic(c.RotationSpeed, displayedTargets.fanSpeed);
+      this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, displayedTargets.roomTemperature);
+      this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, displayedTargets.dhwTemperature);
     } catch (e) {
       this.platform.log.error('Could not update readings and settings.', e instanceof Error ? e.message : '');
     } finally {
@@ -393,5 +410,20 @@ export class CompactPPlatformAccessory {
         callback(callbackError);
         return null;
       });
+  }
+
+  private async handleTargetWrite(
+    target: UserTarget,
+    writer: (value: number) => Promise<number>,
+    value: number,
+    name: string,
+    callback: CharacteristicSetCallback,
+  ): Promise<number | null> {
+    return this.handleWrite(writer, value, name, (error) => {
+      if (error === null) {
+        this.targetResolver.markUserOverride(target);
+      }
+      callback(error);
+    });
   }
 }

@@ -126,6 +126,7 @@ export class CTS700Modbus {
       outdoorTemperature: await this.readTemperatureRegister(Register.OutdoorTemperature),
       panelTemperature: await this.readTemperatureRegister(Register.PanelTemperature),
       actualHumidity: await this.readPercentageRegister(Register.ActualHumidity),
+      inletFanControl: await this.readPercentageRegister(Register.InletFanControl),
       inletFilterReplacementInterval: await this.readFilterReplacementInterval(Register.InletFilterReplacementInterval),
       inletFilterElapsedDays: await this.readFilterElapsedDays(Register.InletFilterElapsedDays),
       outletFilterReplacementInterval: await this.readFilterReplacementInterval(Register.OutletFilterReplacementInterval),
