@@ -18,6 +18,7 @@ const registers = Object.freeze({
   regulationMode: 5432,
   dhwTemperatureSetPoint: 5548,
   weekPrograms: [573, 643, 713],
+  yearPrograms: [783, 848, 913, 978],
 });
 
 const fanTypeNames = Object.freeze([
@@ -207,6 +208,33 @@ function decodeScheduleRecords(buffer) {
   return records;
 }
 
+function decodeYearScheduleRecords(buffer) {
+  const records = [];
+  const bytesPerRecord = 13;
+  for (let offset = 0; offset < buffer.length; offset += bytesPerRecord) {
+    const type = buffer.readUInt8(offset);
+    if (type === 0xff) {
+      continue;
+    }
+    const flags = buffer.readUInt8(offset + 10);
+    records.push({
+      type,
+      recurrence: type === 0 ? 'SELECTED_YEAR' : 'EVERY_YEAR',
+      year: type === 0 ? 2000 + buffer.readUInt8(offset + 1) : null,
+      month: buffer.readUInt8(offset + 2),
+      day: buffer.readUInt8(offset + 3),
+      hour: buffer.readUInt8(offset + 4),
+      minute: buffer.readUInt8(offset + 5),
+      temperature: buffer.readInt16BE(offset + 6) / 10,
+      dhwTemperature: buffer.readInt16BE(offset + 8) / 10,
+      flags,
+      flagNames: decodeScheduleFlags(flags),
+      fanSpeed: buffer.readUInt16BE(offset + 11),
+    });
+  }
+  return records;
+}
+
 async function readWeekSchedule(client) {
   const records = [];
   for (const address of registers.weekPrograms) {
@@ -215,6 +243,18 @@ async function readWeekSchedule(client) {
     if (segment.length < 14) {
       break;
     }
+  }
+  return records;
+}
+
+async function readYearSchedule(client, unsupportedRegisters) {
+  const records = [];
+  for (const address of registers.yearPrograms) {
+    const result = await readOptionalHoldingRegisters(client, address, 65, unsupportedRegisters);
+    if (result === null) {
+      return null;
+    }
+    records.push(...decodeYearScheduleRecords(result.buffer));
   }
   return records;
 }
@@ -239,6 +279,35 @@ function findNextScheduleRecord(records, dateTime) {
   const currentMinute = minuteOfWeek(dateTime);
   const sorted = [...records].sort((left, right) => minuteOfWeek(left) - minuteOfWeek(right));
   return sorted.find(record => minuteOfWeek(record) > currentMinute) ?? sorted[0];
+}
+
+function scheduleOccurrence(record, year) {
+  return {
+    year,
+    month: record.month,
+    day: record.day,
+    hour: record.hour,
+    minute: record.minute,
+  };
+}
+
+function occurrenceTimestamp(occurrence) {
+  return Date.UTC(occurrence.year, occurrence.month - 1, occurrence.day, occurrence.hour, occurrence.minute);
+}
+
+function findSurroundingYearRecords(records, dateTime) {
+  if (records === null || records.length === 0) {
+    return { mostRecent: null, next: null };
+  }
+  const occurrences = records.flatMap(record => {
+    const years = record.year === null ? [dateTime.year - 1, dateTime.year, dateTime.year + 1] : [record.year];
+    return years.map(year => ({ record, occursAt: scheduleOccurrence(record, year) }));
+  }).sort((left, right) => occurrenceTimestamp(left.occursAt) - occurrenceTimestamp(right.occursAt));
+  const currentTimestamp = occurrenceTimestamp(dateTime);
+  return {
+    mostRecent: [...occurrences].reverse().find(entry => occurrenceTimestamp(entry.occursAt) <= currentTimestamp) ?? null,
+    next: occurrences.find(entry => occurrenceTimestamp(entry.occursAt) > currentTimestamp) ?? null,
+  };
 }
 
 async function captureSnapshot(client) {
@@ -271,7 +340,9 @@ async function captureSnapshot(client) {
   const regulationMode = await readSingleRegister(client, registers.regulationMode);
   const dhwTemperatureSetPointRaw = await readSingleRegister(client, registers.dhwTemperatureSetPoint);
   const schedule = await readWeekSchedule(client);
+  const yearSchedule = await readYearSchedule(client, unsupportedRegisters);
   const activeScheduleRecord = findActiveScheduleRecord(schedule, currentDateTime);
+  const surroundingYearRecords = findSurroundingYearRecords(yearSchedule, currentDateTime);
   const inletFanControl = fanControl[0];
   const outletFanControl = fanControl[1];
 
@@ -337,6 +408,11 @@ async function captureSnapshot(client) {
     activeScheduleRecord,
     nextScheduleRecord: findNextScheduleRecord(schedule, currentDateTime),
     scheduleRecordCount: schedule.length,
+    yearSchedule: {
+      recordCount: yearSchedule?.length ?? null,
+      mostRecentRecord: surroundingYearRecords.mostRecent,
+      nextRecord: surroundingYearRecords.next,
+    },
     unsupportedRegisters,
   };
 }

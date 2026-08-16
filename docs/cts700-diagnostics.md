@@ -26,6 +26,8 @@ The single-line JSON result includes:
 - humidity, outdoor-temperature, and related automatic fan settings;
 - computed differences between schedule, user, inlet, and outlet fan values;
 - the active and next records selected from the three week-program segments;
+- the nearest events from all four year-program segments, without assuming
+  undocumented week/year precedence;
 - raw temperature register values alongside their Celsius decoding.
 
 Use `--help` to see the optional TCP port and unit ID arguments.
