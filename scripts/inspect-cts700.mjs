@@ -189,6 +189,15 @@ function findActiveScheduleRecord(records, dateTime) {
   return [...sorted].reverse().find(record => minuteOfWeek(record) <= currentMinute) ?? sorted.at(-1);
 }
 
+function findNextScheduleRecord(records, dateTime) {
+  if (records.length === 0) {
+    return null;
+  }
+  const currentMinute = minuteOfWeek(dateTime);
+  const sorted = [...records].sort((left, right) => minuteOfWeek(left) - minuteOfWeek(right));
+  return sorted.find(record => minuteOfWeek(record) > currentMinute) ?? sorted[0];
+}
+
 async function captureSnapshot(client) {
   const currentDateTime = decodeDateTime((await readHoldingRegisters(client, registers.currentTime, 4)).buffer);
   const systemWorkingMode = await readSingleRegister(client, registers.systemWorkingMode);
@@ -218,6 +227,7 @@ async function captureSnapshot(client) {
       outlet: outletFanControl,
     },
     activeScheduleRecord: findActiveScheduleRecord(schedule, currentDateTime),
+    nextScheduleRecord: findNextScheduleRecord(schedule, currentDateTime),
     scheduleRecordCount: schedule.length,
   };
 }

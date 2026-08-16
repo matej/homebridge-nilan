@@ -21,7 +21,7 @@ The single-line JSON result includes:
 - register 1047, decoded as the system working mode;
 - user targets from registers 4746, 4747, and 5548;
 - actual inlet and outlet fan control values from registers 4699 and 4700;
-- the active record selected from the three week-program segments;
+- the active and next records selected from the three week-program segments;
 - raw temperature register values alongside their Celsius decoding.
 
 Use `--help` to see the optional TCP port and unit ID arguments.
