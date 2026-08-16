@@ -266,8 +266,18 @@ export class CompactPPlatformAccessory {
       this.panelTemperatureSensorService.updateCharacteristic(c.CurrentTemperature, readings.panelTemperature);
       this.ventilationThermostatService.updateCharacteristic(c.CurrentRelativeHumidity, readings.actualHumidity);
       this.dhwThermostatService.updateCharacteristic(c.CurrentTemperature, readings.dhwTankTopTemperature);
-      this.updateFilterMaintenance(this.inletFilterMaintenanceService, readings.inletFilterDeterioration, c);
-      this.updateFilterMaintenance(this.outletFilterMaintenanceService, readings.outletFilterDeterioration, c);
+      this.updateFilterMaintenance(
+        this.inletFilterMaintenanceService,
+        readings.inletFilterElapsedDays,
+        readings.inletFilterReplacementInterval,
+        c,
+      );
+      this.updateFilterMaintenance(
+        this.outletFilterMaintenanceService,
+        readings.outletFilterElapsedDays,
+        readings.outletFilterReplacementInterval,
+        c,
+      );
 
       // The schedule only has minute precision, so we can ignore checks if at least a minute didn't pass. 
       const normalizedDateTime = readings.currentDateTime;
@@ -350,9 +360,17 @@ export class CompactPPlatformAccessory {
     }
   }
 
-  private updateFilterMaintenance(service: Service, deterioration: number, c: NilanHomebridgePlatform['Characteristic']): void {
-    const filterLifeLevel = 100 - deterioration;
-    const changeIndication = deterioration >= 100 ? c.FilterChangeIndication.CHANGE_FILTER : c.FilterChangeIndication.FILTER_OK;
+  private updateFilterMaintenance(
+    service: Service,
+    elapsedDays: number,
+    replacementInterval: number,
+    c: NilanHomebridgePlatform['Characteristic'],
+  ): void {
+    const remainingDays = Math.max(0, replacementInterval - elapsedDays);
+    const filterLifeLevel = Math.round(remainingDays / replacementInterval * 100);
+    const changeIndication = elapsedDays >= replacementInterval
+      ? c.FilterChangeIndication.CHANGE_FILTER
+      : c.FilterChangeIndication.FILTER_OK;
     service.updateCharacteristic(c.FilterLifeLevel, filterLifeLevel);
     service.updateCharacteristic(c.FilterChangeIndication, changeIndication);
   }
