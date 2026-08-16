@@ -6,7 +6,7 @@
 This plugin enables [Apple HomeKit](https://developer.apple.com/homekit/) support for certain [Nilan](https://www.nilan.dk) devices via [Homebridge](https://homebridge.io).
 
 [![NPM Version](https://badgen.net/npm/v/homebridge-nilan)](https://www.npmjs.com/package/homebridge-nilan)
-![Build and Lint](https://github.com/matej/homebridge-nilan/workflows/Build%20and%20Lint/badge.svg)
+[![CI](https://github.com/matej/homebridge-nilan/actions/workflows/build.yml/badge.svg)](https://github.com/matej/homebridge-nilan/actions/workflows/build.yml)
 
 **Apple Home App**
 
@@ -30,11 +30,11 @@ Note that the new CTS 700 touchscreen control panel uses a different version of 
 
 Use the built-in network cable to connect the Compact P to your home network. The unit's default IP address is `192.168.5.107`. You need to make sure you can reach the Compact P from the device that is hosting the Homebridge server (e.g., your [Raspberry Pi](https://www.raspberrypi.org)). If the Homebridge device is on the same network you have at least two options.
 
-#### Adjust the Device IP
+### Adjust the Device IP
 
-Adjust the Compact P network settings via the CTS 700 control panel. First Switch to Super User mode (`Settings > Change user level`), then adjust the IP Address, Network mask and Network gateway to match your network configuration (using `Settings > Network settings`). Be sure to select a free IP address on your network that is outside of any DHCP server IP ranges:
+Adjust the Compact P network settings via the CTS 700 control panel. First switch to Super User mode (`Settings > Change user level`), then adjust the IP Address, Network mask and Network gateway to match your network configuration (using `Settings > Network settings`). Be sure to select a free IP address on your network that is outside of any DHCP server IP ranges.
 
-#### Add Second Subnet (Advanced)
+### Add Second Subnet (Advanced)
 
 Adjust your router configuration to connect your current subnet to `192.168.1.0/24`. With this you can leave the default device settings and reach `192.168.5.107` from the rest of your network. 
 
@@ -80,27 +80,25 @@ Be sure to update the `host` parameter to match your device (if you changed the 
 
 ### Schedule
 
-The `schedule` option should be enabled, if you have a week schedule programmed on your control unit. The option ensures that the values reported in HomeKit update when the week program changes. Otherwise HmeKit just reflects the last set user value.
+The `schedule` option should be enabled if you have a week schedule programmed on your control unit. The option ensures that the values reported in HomeKit update when the week program changes. Otherwise HomeKit just reflects the last user-set value.
 
-# Developer Notes
+## Developer Notes
 
-## Setup Development Environment
+### Setup Development Environment
 
 This plugin requires Node.js 22 or 24 and a modern code editor such as [VS Code](https://code.visualstudio.com/). It uses [TypeScript](https://www.typescriptlang.org/) and comes with pre-configured settings for [VS Code](https://code.visualstudio.com/) and ESLint. If you are using VS Code install these extensions:
 
 * [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
 
-## Install Development Dependencies
+### Install Development Dependencies
 
 Using a terminal, navigate to the project folder and run this command to install the development dependencies:
 
 ```
-npm install
+npm ci
 ```
 
-You might need to run this command with `sudo`.
-
-## Build Plugin
+### Build Plugin
 
 TypeScript needs to be compiled into JavaScript before it can run. The following command will compile the contents of your [`src`](./src) directory and put the resulting code into the `dist` folder.
 
@@ -108,7 +106,7 @@ TypeScript needs to be compiled into JavaScript before it can run. The following
 npm run build
 ```
 
-## Link to Homebridge
+### Link to Homebridge
 
 Run this command so your global install of Homebridge can discover the plugin in your development environment:
 
@@ -122,7 +120,7 @@ You can now start Homebridge, use the `-D` flag so you can see debug log message
 homebridge -D
 ```
 
-## Watch for Changes and Build Automatically
+### Watch for Changes and Build Automatically
 
 If you want to have your code compile automatically as you make changes, and restart Homebridge automatically between changes you can run:
 
@@ -132,10 +130,15 @@ npm run watch
 
 This will launch an instance of Homebridge in debug mode which will restart every time you make a change to the source code. It will load the config stored in the default location under `~/.homebridge`. You may need to stop other running instances of Homebridge while using this command to prevent conflicts. You can adjust the Homebridge startup command in the [`nodemon.json`](./nodemon.json) file.
 
-# Disclaimer
+## Contributing and Security
 
-The plugin is based on the open Nilan Modbus protocol and only accesses user-level registers without needing any privileged access. While the plugin was extensively tested on the author's own hardware, there is no guarantees given that the it will perform without issues in other environments. Please proceed at your own risk.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidance.
+Report security-sensitive issues according to [SECURITY.md](SECURITY.md), not in a public issue.
 
-This plugin, or it's author is in no way associated with Nilan A/S.  
+## Disclaimer
 
-Nilan is a registered trademark of [Nilan A/S]((https://www.nilan.dk)).
+The plugin is based on the open Nilan Modbus protocol and only accesses user-level registers without needing any privileged access. While the plugin was extensively tested on the author's own hardware, there are no guarantees that it will perform without issues in other environments. Please proceed at your own risk.
+
+This plugin and its author are not associated with Nilan A/S.
+
+Nilan is a registered trademark of [Nilan A/S](https://www.nilan.dk).
