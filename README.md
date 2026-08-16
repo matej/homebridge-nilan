@@ -46,8 +46,9 @@ temperature. It polls the controller every 10 seconds.
 
 [Compact P](https://www.nilan.dk/produkter/ventilation-med-opvarmning/ventilation-og-varmt-brugsvand/compact-p)
 ventilation and heating system with the older CTS 700 control panel. The
-implementation follows Nilan's *Modbus Registers Description* for CTS 700,
-dated 2015-08-26.
+implementation follows Nilan's *CTS 700 Modbus Registers Description*, revision
+2.01 (last updated 2016-03-11). Nilan no longer hosts it at its original URL, but
+a [preserved copy is available from the Internet Archive](https://web.archive.org/web/20250204012946id_/https://symlink.dk/stuff/CTS700_MODBUS-rev%202.01.pdf).
 
 <img src="resources/images/nilan-compact-p.png" height="200" alt="Nilan Compact P">
 
