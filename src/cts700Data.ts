@@ -19,6 +19,12 @@ export enum Register {
 	OutdoorTemperature = 5152,
 	// ActualHumidity is ID of register holding actual humidity value
 	ActualHumidity = 4716,
+	// Filter deterioration is reported as 0% for a new filter and 100% when replacement is due.
+	InletFilterDeterioration = 4692,
+	OutletFilterDeterioration = 4693,
+	// Writing 1 resets the corresponding filter deterioration counter.
+	InletFilterReset = 4756,
+	OutletFilterReset = 4757,
 	// DHWTopTankTemperature is ID of register holding T11 top DHW tank temperature
 	DHWTopTankTemperature = 5162,
 	// DHWBottomTankTemperature is ID of register holding T12 bottom DHW tank temperature
@@ -133,6 +139,10 @@ export interface Readings {
 	panelTemperature: number;
 	// Actual humidity of air (0-100%)
 	actualHumidity: number;
+	// Inlet filter deterioration (0-100%)
+	inletFilterDeterioration: number;
+	// Outlet filter deterioration (0-100%)
+	outletFilterDeterioration: number;
 	// DHW tank top temperature in C times 10
 	dhwTankTopTemperature: number;
 	// Current device time.

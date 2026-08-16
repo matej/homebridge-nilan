@@ -27,8 +27,9 @@ The newer CTS 700 touchscreen panel uses a different protocol and is **not
 supported**.
 
 The plugin exposes ventilation state and fan speed, room temperature and target,
-domestic hot-water state and target, relative humidity, and outdoor and panel
-temperature. It polls the controller every 10 seconds.
+domestic hot-water state and target, relative humidity, inlet and outlet filter
+life and reset controls, and outdoor and panel temperature. It polls the
+controller every 10 seconds.
 
 ## Screenshots
 

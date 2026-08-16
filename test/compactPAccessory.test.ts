@@ -60,9 +60,12 @@ function createHarness(schedule = false) {
     CurrentRelativeHumidity: Symbol('CurrentRelativeHumidity'),
     CurrentTemperature: Symbol('CurrentTemperature'),
     FirmwareRevision: Symbol('FirmwareRevision'),
+    FilterChangeIndication: Object.assign(Symbol('FilterChangeIndication'), { CHANGE_FILTER: 1, FILTER_OK: 0 }),
+    FilterLifeLevel: Symbol('FilterLifeLevel'),
     Manufacturer: Symbol('Manufacturer'),
     Model: Symbol('Model'),
     RotationSpeed: Symbol('RotationSpeed'),
+    ResetFilterIndication: Symbol('ResetFilterIndication'),
     SerialNumber: Symbol('SerialNumber'),
     TargetHeatingCoolingState: Object.assign(Symbol('TargetHeatingCoolingState'), { AUTO: 3, COOL: 2, HEAT: 1, OFF: 0 }),
     TargetTemperature: Symbol('TargetTemperature'),
@@ -71,6 +74,7 @@ function createHarness(schedule = false) {
   const ServiceTypes = {
     AccessoryInformation: Symbol('AccessoryInformation'),
     Fanv2: Symbol('Fanv2'),
+    FilterMaintenance: Symbol('FilterMaintenance'),
     TemperatureSensor: Symbol('TemperatureSensor'),
     Thermostat: Symbol('Thermostat'),
   };
@@ -100,6 +104,8 @@ function createHarness(schedule = false) {
     fetchMetadata: vi.fn().mockResolvedValue({ macAddress: '00:11:22:33:44:55', softwareVersion: '1.2.3' }),
     fetchReadings: vi.fn().mockResolvedValue({
       actualHumidity: 48,
+      inletFilterDeterioration: 25,
+      outletFilterDeterioration: 100,
       currentDateTime: { second: 1, minute: 2, hour: 3, day: 4, weekDay: 5, month: 6, year: 26 },
       dhwTankTopTemperature: 51,
       outdoorTemperature: -5,
@@ -117,6 +123,8 @@ function createHarness(schedule = false) {
     writeDHWPaused: vi.fn().mockResolvedValue(PauseOption.Disabled),
     writeDHWSetPoint: vi.fn().mockResolvedValue(50),
     writeFanSpeed: vi.fn().mockResolvedValue(60),
+    resetInletFilter: vi.fn().mockResolvedValue(1),
+    resetOutletFilter: vi.fn().mockResolvedValue(1),
     writeRoomTemperatureSetPoint: vi.fn().mockResolvedValue(22),
     writeVentilationMode: vi.fn().mockResolvedValue(VentilationMode.Auto),
     writeVentilationPaused: vi.fn().mockResolvedValue(PauseOption.Disabled),
@@ -191,6 +199,27 @@ describe('CompactPPlatformAccessory', () => {
     expect(services.get('compact-p-temperature')!.updates).toContainEqual([Characteristic.CurrentTemperature, 21]);
     expect(services.get('compact-p-fan')!.updates).toContainEqual([Characteristic.RotationSpeed, 60]);
     expect(services.get('compact-p-dhw')!.updates).toContainEqual([Characteristic.TargetTemperature, 50]);
+    expect(services.get('compact-p-inlet-filter')!.updates).toContainEqual([Characteristic.FilterLifeLevel, 75]);
+    expect(services.get('compact-p-inlet-filter')!.updates).toContainEqual([
+      Characteristic.FilterChangeIndication,
+      Characteristic.FilterChangeIndication.FILTER_OK,
+    ]);
+    expect(services.get('compact-p-outlet-filter')!.updates).toContainEqual([Characteristic.FilterLifeLevel, 0]);
+    expect(services.get('compact-p-outlet-filter')!.updates).toContainEqual([
+      Characteristic.FilterChangeIndication,
+      Characteristic.FilterChangeIndication.CHANGE_FILTER,
+    ]);
+  });
+
+  it('resets inlet and outlet filter counters from HomeKit', async () => {
+    const { Characteristic, modbus, services } = createHarness();
+
+    await invokeSet(services.get('compact-p-inlet-filter')!, Characteristic.ResetFilterIndication, 0);
+    await invokeSet(services.get('compact-p-inlet-filter')!, Characteristic.ResetFilterIndication, 1);
+    await invokeSet(services.get('compact-p-outlet-filter')!, Characteristic.ResetFilterIndication, 1);
+
+    expect(modbus.resetInletFilter).toHaveBeenCalledOnce();
+    expect(modbus.resetOutletFilter).toHaveBeenCalledOnce();
   });
 
   it('does not overlap slow polling cycles', async () => {
@@ -206,6 +235,8 @@ describe('CompactPPlatformAccessory', () => {
 
     resolveReadings!({
       actualHumidity: 48,
+      inletFilterDeterioration: 25,
+      outletFilterDeterioration: 100,
       currentDateTime: { second: 1, minute: 2, hour: 3, day: 4, weekDay: 5, month: 6, year: 26 },
       dhwTankTopTemperature: 51,
       outdoorTemperature: -5,

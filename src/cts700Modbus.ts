@@ -125,6 +125,8 @@ export class CTS700Modbus {
       outdoorTemperature: await this.readTemperatureRegister(Register.OutdoorTemperature),
       panelTemperature: await this.readTemperatureRegister(Register.PanelTemperature),
       actualHumidity: await this.readPercentageRegister(Register.ActualHumidity),
+      inletFilterDeterioration: await this.readPercentageRegister(Register.InletFilterDeterioration),
+      outletFilterDeterioration: await this.readPercentageRegister(Register.OutletFilterDeterioration),
       dhwTankTopTemperature: await this.readTemperatureRegister(Register.DHWTopTankTemperature),
       currentDateTime: await this.readDateTimeRegister(Register.CurrentTime),
     };
@@ -334,6 +336,14 @@ export class CTS700Modbus {
 
   public async writeDHWPaused(paused: boolean): Promise<PauseOption> {
     return this.writePauseComponent(PauseOption.DHW, paused);
+  }
+
+  public async resetInletFilter(): Promise<number> {
+    return this.writeSingleRegister(Register.InletFilterReset, 1);
+  }
+
+  public async resetOutletFilter(): Promise<number> {
+    return this.writeSingleRegister(Register.OutletFilterReset, 1);
   }
 
   public async writeVentilationMode(value: VentilationMode): Promise<VentilationMode> {
