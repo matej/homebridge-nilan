@@ -40,7 +40,9 @@ export enum Register {
 	// Current Date-Time value.
 	CurrentTime = 4722,
 	// First 14 program records of Week Program.
-	FistWeekProgram = 573,
+	FirstWeekProgram = 573,
+	// Kept as an alias for consumers compiled against the original typo.
+	FistWeekProgram = FirstWeekProgram,
 	// Second 14 program records of Week Program.
 	SecondWeekProgram = 643,
 	// The MAC address for main board device.
@@ -170,4 +172,3 @@ export interface WeekScheduleRecord {
 	// 0 ÷ 100 (%)
 	fanSpeed: number;
 }
-

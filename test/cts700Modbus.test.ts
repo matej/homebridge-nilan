@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OperationMode, PauseOption, Register, VentilationMode } from '../src/cts700Data';
 import { CTS700Modbus } from '../src/cts700Modbus';
 
 const { MockModbusRTU, client } = vi.hoisted(() => {
   const client = {
-    close: vi.fn((callback: () => void) => callback()),
+    close: vi.fn((callback?: () => void) => callback?.()),
     connectTCP: vi.fn<() => Promise<void>>(),
     isOpen: true,
     readHoldingRegisters: vi.fn(),
@@ -69,6 +69,10 @@ beforeEach(() => {
   client.writeRegister.mockImplementation(async (address: number, value: number) => ({ address, value }));
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe('CTS700Modbus connection', () => {
   it('connects with the CTS700 TCP defaults', async () => {
     await createModbus();
@@ -77,6 +81,34 @@ describe('CTS700Modbus connection', () => {
     expect(client.connectTCP).toHaveBeenCalledWith('192.0.2.1', { port: 502 });
     expect(client.setID).toHaveBeenCalledWith(1);
     expect(client.setTimeout).toHaveBeenCalledWith(5000);
+  });
+
+  it('reconnects after network errors and recognizes the Node error code', async () => {
+    const modbus = await createModbus();
+    vi.useFakeTimers();
+    const error = Object.assign(new Error('socket failure'), { code: 'ECONNRESET' });
+    client.readHoldingRegisters.mockRejectedValue(error);
+
+    await expect(modbus.fetchReadings()).rejects.toBe(error);
+    expect(client.close).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(client.connectTCP).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it('cancels pending reconnects when closed', async () => {
+    const modbus = await createModbus();
+    vi.useFakeTimers();
+    const error = Object.assign(new Error('socket failure'), { code: 'ETIMEDOUT' });
+    client.readHoldingRegisters.mockRejectedValue(error);
+
+    await expect(modbus.fetchReadings()).rejects.toBe(error);
+    modbus.close();
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(client.connectTCP).toHaveBeenCalledOnce();
+    vi.useRealTimers();
   });
 });
 
@@ -215,6 +247,38 @@ describe('CTS700Modbus reads', () => {
     })).resolves.toBeNull();
   });
 
+  it('reads and selects records from the second half of a full week program', async () => {
+    const modbus = await createModbus();
+    const firstHalf = Array.from({ length: 14 }, (_, hour) => ({
+      weekDay: 1,
+      hour,
+      minute: 0,
+      temperature: 20,
+      dhwTemperature: 48,
+      flags: 0,
+      fanSpeed: 40,
+    }));
+    client.readHoldingRegisters.mockImplementation(async (address: number) => {
+      if (address === Register.FirstWeekProgram) {
+        return scheduleResult(firstHalf);
+      }
+      return scheduleResult([
+        { weekDay: 7, hour: 23, minute: 0, temperature: 22, dhwTemperature: 52, flags: 0, fanSpeed: 70 },
+      ]);
+    });
+
+    await expect(modbus.fetchActiveWeekProgramForDateTime({
+      second: 0,
+      minute: 30,
+      hour: 23,
+      day: 1,
+      weekDay: 7,
+      month: 1,
+      year: 26,
+    })).resolves.toMatchObject({ weekDay: 7, hour: 23, fanSpeed: 70 });
+    expect(client.readHoldingRegisters).toHaveBeenCalledWith(Register.SecondWeekProgram, 70);
+  });
+
   it('rejects reads while disconnected', async () => {
     const modbus = await createModbus();
     (modbus as unknown as { client: null }).client = null;
@@ -257,5 +321,29 @@ describe('CTS700Modbus writes', () => {
     client.writeRegister.mockResolvedValue({ address: Register.FanSpeed, value: 20 });
 
     await expect(modbus.writeFanSpeed(50)).rejects.toThrow('Setting value failed.');
+  });
+
+  it('preserves the DHW pause bit when changing ventilation pause', async () => {
+    const modbus = await createModbus();
+    client.readHoldingRegisters.mockResolvedValueOnce(registerResult([PauseOption.DHW]));
+
+    await expect(modbus.writeVentilationPaused(true)).resolves.toBe(PauseOption.All);
+    expect(client.writeRegister).toHaveBeenLastCalledWith(Register.Pause, PauseOption.All);
+
+    client.readHoldingRegisters.mockResolvedValueOnce(registerResult([PauseOption.All]));
+    await expect(modbus.writeVentilationPaused(false)).resolves.toBe(PauseOption.DHW);
+    expect(client.writeRegister).toHaveBeenLastCalledWith(Register.Pause, PauseOption.DHW);
+  });
+
+  it('preserves the ventilation pause bit when changing DHW pause', async () => {
+    const modbus = await createModbus();
+    client.readHoldingRegisters.mockResolvedValueOnce(registerResult([PauseOption.Ventilation]));
+
+    await expect(modbus.writeDHWPaused(true)).resolves.toBe(PauseOption.All);
+    expect(client.writeRegister).toHaveBeenLastCalledWith(Register.Pause, PauseOption.All);
+
+    client.readHoldingRegisters.mockResolvedValueOnce(registerResult([PauseOption.All]));
+    await expect(modbus.writeDHWPaused(false)).resolves.toBe(PauseOption.Ventilation);
+    expect(client.writeRegister).toHaveBeenLastCalledWith(Register.Pause, PauseOption.Ventilation);
   });
 });

@@ -1,9 +1,12 @@
 import { Service, PlatformAccessory, CharacteristicEventTypes, CharacteristicValue, CharacteristicSetCallback } from 'homebridge';
-import deepEqual from 'deep-equal';
+import { isDeepStrictEqual } from 'node:util';
 
 import { DateTime, OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
-import { CTS700Modbus, NumericWriter, WriterParameterTypes } from './cts700Modbus';
-import { NilanHomebridgePlatform } from './platform';
+import { CTS700Modbus } from './cts700Modbus';
+import type { NilanHomebridgePlatform } from './platform';
+
+type WriterParameter = boolean | number | PauseOption | VentilationMode;
+type ModbusFactory = (host: string, didConnect: () => void) => CTS700Modbus;
 
 export class CompactPPlatformAccessory {
   private ventilationFanService: Service;
@@ -13,6 +16,8 @@ export class CompactPPlatformAccessory {
   private panelTemperatureSensorService: Service;
   
   private cts700Modbus: CTS700Modbus;
+  private readonly updateInterval: ReturnType<typeof setInterval>;
+  private updateInProgress = false;
 
   private processedDateTime?: DateTime;
   private processedSchedule?: WeekScheduleRecord;
@@ -20,9 +25,10 @@ export class CompactPPlatformAccessory {
   constructor(
     private readonly platform: NilanHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
+    modbusFactory: ModbusFactory = (host, didConnect) => new CTS700Modbus(host, didConnect),
   ) {
 
-    this.cts700Modbus = new CTS700Modbus(this.accessory.context.device.host, () => {
+    this.cts700Modbus = modbusFactory(this.accessory.context.device.host, () => {
       this.setUpAfterConnection();
     }); 
 
@@ -37,9 +43,14 @@ export class CompactPPlatformAccessory {
     this.outsideTemperatureSensorService = this.setUpOutsideTemperatureSensor(platform, accessory);
     this.panelTemperatureSensorService = this.setUpPanelTemperatureSensor(platform, accessory);
 
-    setInterval(() => {
-      this.updateFromDevice(platform);
+    this.updateInterval = setInterval(() => {
+      void this.updateFromDevice(platform);
     }, 10000);
+  }
+
+  public shutdown(): void {
+    clearInterval(this.updateInterval);
+    this.cts700Modbus.close();
   }
 
   private async setUpAfterConnection() {
@@ -52,7 +63,7 @@ export class CompactPPlatformAccessory {
         .setCharacteristic(this.platform.Characteristic.FirmwareRevision, metadata.softwareVersion);
 
     } catch (e) {
-      this.platform.log.error('Could obtain device metadata after connection.', e instanceof Error ? e.message : '');
+      this.platform.log.error('Could not obtain device metadata after connection.', e instanceof Error ? e.message : '');
     }
   }
 
@@ -71,13 +82,13 @@ export class CompactPPlatformAccessory {
 
     ventilationFanService.getCharacteristic(c.RotationSpeed)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.handleWrite(CTS700Modbus.prototype.writeFanSpeed, value as number, 'Rotation speed', callback);
+        this.handleWrite(next => this.cts700Modbus.writeFanSpeed(next), value as number, 'Rotation speed', callback);
       });
 
     ventilationFanService.getCharacteristic(c.Active)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        const pauseOption = value === c.Active.INACTIVE ? PauseOption.Ventilation : PauseOption.Disabled;
-        this.handleWrite(CTS700Modbus.prototype.writePauseOption, pauseOption, 'Pause option', callback);
+        const paused = value === c.Active.INACTIVE;
+        this.handleWrite(next => this.cts700Modbus.writeVentilationPaused(next), paused, 'Ventilation pause', callback);
       });
 
     return ventilationFanService;
@@ -99,31 +110,32 @@ export class CompactPPlatformAccessory {
 
     ventilationThermostatService.getCharacteristic(c.TargetTemperature)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.handleWrite(CTS700Modbus.prototype.writeRoomTemperatureSetPoint, value as number, 'Room temperature', callback);
+        this.handleWrite(next => this.cts700Modbus.writeRoomTemperatureSetPoint(next), value as number, 'Room temperature', callback);
       });
     
     ventilationThermostatService.getCharacteristic(c.TargetHeatingCoolingState)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        let pauseOption: PauseOption;
+        let paused: boolean;
         let ventilationMode: VentilationMode | null = null;  
 
         if (value === c.TargetHeatingCoolingState.OFF) {
-          pauseOption = PauseOption.Ventilation;
+          paused = true;
         } else if (value === c.TargetHeatingCoolingState.HEAT) {
-          pauseOption = PauseOption.Disabled;
+          paused = false;
           ventilationMode = VentilationMode.Heating;
         } else if (value === c.TargetHeatingCoolingState.COOL) {
-          pauseOption = PauseOption.Disabled;
+          paused = false;
           ventilationMode = VentilationMode.Cooling;
         } else { //  c.TargetHeatingCoolingState.AUTO
-          pauseOption = PauseOption.Disabled;
+          paused = false;
           ventilationMode = VentilationMode.Auto;
         }
 
-        this.handleWrite(CTS700Modbus.prototype.writePauseOption, pauseOption, 'Pause option', (result) => {
+        this.handleWrite(next => this.cts700Modbus.writeVentilationPaused(next), paused, 'Ventilation pause', (result) => {
           // Only set ventilation mode if not paused and the previous operation succeeded. 
           if ((ventilationMode !== null) && (result === null)) {
-            this.handleWrite(CTS700Modbus.prototype.writeVentilationMode, ventilationMode as VentilationMode, 'Ventilation mode', callback);
+            this.handleWrite(next => this.cts700Modbus.writeVentilationMode(next), ventilationMode as VentilationMode,
+              'Ventilation mode', callback);
           } else {
             callback(result);
           }
@@ -155,13 +167,13 @@ export class CompactPPlatformAccessory {
 
     dhwThermostatService.getCharacteristic(c.TargetTemperature)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.handleWrite(CTS700Modbus.prototype.writeDHWSetPoint, value as number, 'DHW temperature', callback);
+        this.handleWrite(next => this.cts700Modbus.writeDHWSetPoint(next), value as number, 'DHW temperature', callback);
       });
 
     dhwThermostatService.getCharacteristic(c.TargetHeatingCoolingState)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        const pauseOption = value === c.TargetHeatingCoolingState.OFF ? PauseOption.DHW : PauseOption.Disabled;
-        this.handleWrite(CTS700Modbus.prototype.writePauseOption, pauseOption, 'Pause option', callback);
+        const paused = value === c.TargetHeatingCoolingState.OFF;
+        this.handleWrite(next => this.cts700Modbus.writeDHWPaused(next), paused, 'DHW pause', callback);
       });
 
     return dhwThermostatService;
@@ -198,6 +210,12 @@ export class CompactPPlatformAccessory {
   }
 
   private async updateFromDevice(platform: NilanHomebridgePlatform) {
+    if (this.updateInProgress) {
+      this.platform.log.debug('Skipping device update because the previous poll is still running.');
+      return;
+    }
+
+    this.updateInProgress = true;
     try {
       const readings = await this.cts700Modbus.fetchReadings();
       this.platform.log.debug('Updating with readings:', readings);
@@ -214,11 +232,11 @@ export class CompactPPlatformAccessory {
       const normalizedDateTime = readings.currentDateTime;
       normalizedDateTime.second = 0;
       const shouldSkipSchedule = this.accessory.context.device.schedule === false;
-      if (!shouldSkipSchedule && !deepEqual(normalizedDateTime, this.processedDateTime)) {
+      if (!shouldSkipSchedule && !isDeepStrictEqual(normalizedDateTime, this.processedDateTime)) {
         this.platform.log.debug('Checking week schedule.');
         const activeSchedule = await this.cts700Modbus.fetchActiveWeekProgramForDateTime(readings.currentDateTime);
 
-        if (activeSchedule && !deepEqual(activeSchedule, this.processedSchedule)) {
+        if (activeSchedule && !isDeepStrictEqual(activeSchedule, this.processedSchedule)) {
           this.platform.log.debug('Updating fan temperature, dhw temperature and fan speed to match schedule.',
             activeSchedule.temperature,
             activeSchedule.dhwTemperature,
@@ -286,23 +304,30 @@ export class CompactPPlatformAccessory {
       this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, settings.dhwTemperatureSetPoint);
     } catch (e) {
       this.platform.log.error('Could not update readings and settings.', e instanceof Error ? e.message : '');
+    } finally {
+      this.updateInProgress = false;
     }
   }
 
-  private async handleWrite(writer: NumericWriter, value: WriterParameterTypes, name: string, callback: CharacteristicSetCallback): 
-    Promise<WriterParameterTypes | null> {
+  private async handleWrite<T extends WriterParameter, R extends WriterParameter>(
+    writer: (value: T) => Promise<R>,
+    value: T,
+    name: string,
+    callback: CharacteristicSetCallback,
+  ): Promise<R | null> {
       
-    this.platform.log.debug(name, 'updating to to:', value);
+    this.platform.log.debug(name, 'updating to:', value);
 
-    return writer.call(this.cts700Modbus, value)
+    return writer(value)
       .then((result) => {
         this.platform.log.debug(name, 'update ok. Wrote:', result);
         callback(null);
         return result;
       })
-      .catch((error) => {
-        this.platform.log.debug(name, 'update failed. Error:', error.message);
-        callback(error);
+      .catch((error: unknown) => {
+        const callbackError = error instanceof Error ? error : new Error(String(error));
+        this.platform.log.debug(name, 'update failed. Error:', callbackError.message);
+        callback(callbackError);
         return null;
       });
   }

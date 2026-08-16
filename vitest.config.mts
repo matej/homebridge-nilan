@@ -5,12 +5,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      include: ['src/cts700Data.ts', 'src/cts700Modbus.ts'],
+      include: ['src/compactPAccessory.ts', 'src/cts700Data.ts', 'src/cts700Modbus.ts', 'src/platform.ts'],
       thresholds: {
-        lines: 70,
-        functions: 70,
-        branches: 65,
-        statements: 70,
+        lines: 80,
+        functions: 80,
+        branches: 70,
+        statements: 80,
       },
     },
     clearMocks: true,
