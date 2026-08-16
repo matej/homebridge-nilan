@@ -66,9 +66,12 @@ to real hardware.
   degrees Celsius by the read helpers.
 - The pause register controls both ventilation and hot-water state. Review both
   HomeKit services when changing pause or operating-mode behavior.
-- Week-schedule support may write room temperature, hot-water temperature, and
-  fan speed back to the unit. Do not exercise live writes without explicit user
-  authorization and a known test device.
+- Week-schedule support is read-only and selects displayed targets according to
+  the system working mode. Only explicit HomeKit actions may write room
+  temperature, hot-water temperature, or fan speed to the unit. Do not exercise
+  live writes without explicit user authorization and a known test device.
+- `npm run diagnose:cts700` is a read-only hardware observation tool. Keep real
+  controller addresses and captured output out of commits.
 - Keep `config.schema.json`, `README.md`, and runtime configuration handling in
   sync when adding or changing user-facing options.
 - Do not assume access to a Nilan unit. Structure protocol changes so conversions

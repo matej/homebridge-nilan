@@ -1,7 +1,7 @@
 import { Service, PlatformAccessory, CharacteristicEventTypes, CharacteristicValue, CharacteristicSetCallback } from 'homebridge';
 import { isDeepStrictEqual } from 'node:util';
 
-import { DateTime, OperationMode, PauseOption, VentilationMode, WeekScheduleRecord } from './cts700Data';
+import { DateTime, OperationMode, PauseOption, SystemWorkingMode, VentilationMode, WeekScheduleRecord } from './cts700Data';
 import { CTS700Modbus } from './cts700Modbus';
 import type { NilanHomebridgePlatform } from './platform';
 
@@ -22,7 +22,7 @@ export class CompactPPlatformAccessory {
   private updateInProgress = false;
 
   private processedDateTime?: DateTime;
-  private processedSchedule?: WeekScheduleRecord;
+  private processedSchedule: WeekScheduleRecord | null = null;
 
   constructor(
     private readonly platform: NilanHomebridgePlatform,
@@ -269,36 +269,33 @@ export class CompactPPlatformAccessory {
       this.updateFilterMaintenance(this.inletFilterMaintenanceService, readings.inletFilterDeterioration, c);
       this.updateFilterMaintenance(this.outletFilterMaintenanceService, readings.outletFilterDeterioration, c);
 
-      // The schedule only has minute precision, so we can ignore checks if at least a minute didn't pass. 
-      const normalizedDateTime = readings.currentDateTime;
-      normalizedDateTime.second = 0;
-      const shouldSkipSchedule = this.accessory.context.device.schedule === false;
-      if (!shouldSkipSchedule && !isDeepStrictEqual(normalizedDateTime, this.processedDateTime)) {
-        this.platform.log.debug('Checking week schedule.');
-        const activeSchedule = await this.cts700Modbus.fetchActiveWeekProgramForDateTime(readings.currentDateTime);
-
-        if (activeSchedule && !isDeepStrictEqual(activeSchedule, this.processedSchedule)) {
-          this.platform.log.debug('Updating fan temperature, dhw temperature and fan speed to match schedule.',
-            activeSchedule.temperature,
-            activeSchedule.dhwTemperature,
-            activeSchedule.fanSpeed);
-
-          await this.cts700Modbus.writeRoomTemperatureSetPoint(activeSchedule.temperature);
-          await this.cts700Modbus.writeDHWSetPoint(activeSchedule.dhwTemperature);
-          await this.cts700Modbus.writeFanSpeed(activeSchedule.fanSpeed);
-
-          this.platform.log.debug('Updated fan temperature, dhw temperature and fan speed to match schedule.');
-
-          this.processedSchedule = activeSchedule;
-        } else {
-          this.platform.log.debug('No updates for week schedule needed.');
-        }
-
-        this.processedDateTime = normalizedDateTime;
-      }
-      
       const settings = await this.cts700Modbus.fetchSettings();
       this.platform.log.debug('Updating with settings:', settings);
+
+      let displayedFanSpeed = settings.fanSpeed;
+      let displayedRoomTemperatureSetPoint = settings.roomTemperatureSetPoint;
+      let displayedDHWTemperatureSetPoint = settings.dhwTemperatureSetPoint;
+
+      const shouldReadSchedule = this.accessory.context.device.schedule !== false &&
+        settings.systemWorkingMode === SystemWorkingMode.Auto;
+      if (shouldReadSchedule) {
+        // The schedule only has minute precision, so reuse the active record within the same controller minute.
+        const normalizedDateTime = { ...readings.currentDateTime, second: 0 };
+        if (!isDeepStrictEqual(normalizedDateTime, this.processedDateTime)) {
+          this.platform.log.debug('Reading active week schedule entry.');
+          this.processedSchedule = await this.cts700Modbus.fetchActiveWeekProgramForDateTime(readings.currentDateTime);
+          this.processedDateTime = normalizedDateTime;
+        }
+
+        if (this.processedSchedule !== null) {
+          displayedFanSpeed = this.processedSchedule.fanSpeed;
+          displayedRoomTemperatureSetPoint = this.processedSchedule.temperature;
+          displayedDHWTemperatureSetPoint = this.processedSchedule.dhwTemperature;
+          this.platform.log.debug('Using automatic week schedule targets:', this.processedSchedule);
+        } else {
+          this.platform.log.debug('No active week schedule entry found; using user targets.');
+        }
+      }
 
       if (settings.paused === PauseOption.Ventilation || settings.paused === PauseOption.All) {
         this.ventilationThermostatService.updateCharacteristic(c.CurrentHeatingCoolingState, c.CurrentHeatingCoolingState.OFF);
@@ -340,9 +337,9 @@ export class CompactPPlatformAccessory {
         this.dhwThermostatService.updateCharacteristic(c.TargetHeatingCoolingState, c.TargetHeatingCoolingState.HEAT); 
       }
 
-      this.ventilationFanService.updateCharacteristic(c.RotationSpeed, settings.fanSpeed);
-      this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, settings.roomTemperatureSetPoint);
-      this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, settings.dhwTemperatureSetPoint);
+      this.ventilationFanService.updateCharacteristic(c.RotationSpeed, displayedFanSpeed);
+      this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, displayedRoomTemperatureSetPoint);
+      this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, displayedDHWTemperatureSetPoint);
     } catch (e) {
       this.platform.log.error('Could not update readings and settings.', e instanceof Error ? e.message : '');
     } finally {

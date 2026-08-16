@@ -1,4 +1,7 @@
 export enum Register {
+	// Current system working mode (read-only).
+	// 0 Idle, 1 Auto, 2 Extended operate, 3 Manual, 4 LON, 5 Service.
+	SystemWorkingMode = 1047,
 	// Pause is ID of register holding the pause flag
 	// 0 (Disabled)
 	// 1 (Pause ventilation)
@@ -104,6 +107,15 @@ export enum OperationMode {
 	DHW
   }
 
+export enum SystemWorkingMode {
+	Idle = 0,
+	Auto,
+	ExtendedOperate,
+	Manual,
+	LON,
+	Service,
+  }
+
 // Device metadata for the Nilan system
 export interface Metadata {
     // The Serial number of control board.
@@ -115,6 +127,8 @@ export interface Metadata {
 
 // Settings of Nilan system
 export interface Settings {
+	// Identifies whether targets come from the week/year program or user settings.
+	systemWorkingMode: SystemWorkingMode;
     // Paused tells if operation is currently paused
 	paused: PauseOption;
 	// Fan speed of ventilation (20-100)

@@ -121,7 +121,7 @@ For manual configuration, add an entry to the `platforms` array in Homebridge's
 | `devices` | Yes | One or more Compact P controller definitions. |
 | `devices[].name` | Yes | Display name for the HomeKit accessory. |
 | `devices[].host` | Yes | IPv4 address of the controller. |
-| `devices[].schedule` | No | Synchronize setpoints and fan speed with the CTS 700 week program; defaults to `true`. |
+| `devices[].schedule` | No | Read automatic setpoints and fan speed from the CTS 700 week program; defaults to `true`. |
 
 Give each configured device a unique IP address. If you change a device's
 `host`, Homebridge treats it as a new accessory because the IP address is part
@@ -130,10 +130,10 @@ of its persistent identity.
 ### Schedule
 
 Enable `schedule` when a week program is active on the controller. The plugin
-then keeps HomeKit's room-temperature target, hot-water target, and fan speed in
-sync with the active schedule entry. This synchronization can write those three
-values back to the controller. Set the option to `false` if no week program is
-configured or if HomeKit should retain the last manually selected values.
+reads the controller's working mode: automatic operation is displayed using the
+active schedule entry, while manual and other modes use the controller's user
+setpoints. Schedule synchronization is read-only; only explicit HomeKit actions
+write to the controller. Set the option to `false` if no week program is configured.
 
 ## Troubleshooting
 

@@ -24,10 +24,10 @@
             "description": "Check the control panel in Super user mode under Settings -> Network Settings. Make sure you can ping the Nilan unit from your Homebridge device."
           },
           "schedule": {
-            "title": "Synchronize with week schedule",
+            "title": "Read week schedule",
             "type": "boolean",
             "default": true,
-            "description": "Enable this when a week schedule is programmed on the controller. The plugin keeps the HomeKit room-temperature target, hot-water target, and fan speed synchronized with the active schedule entry."
+            "description": "Enable this when a week schedule is programmed on the controller. In automatic mode the plugin reads HomeKit target values from the active schedule entry without writing them back to the controller."
           }
         }
       }
