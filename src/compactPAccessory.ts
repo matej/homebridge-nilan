@@ -14,6 +14,8 @@ export class CompactPPlatformAccessory {
   private dhwThermostatService: Service;
   private outsideTemperatureSensorService: Service;
   private panelTemperatureSensorService: Service;
+  private inletFilterMaintenanceService: Service;
+  private outletFilterMaintenanceService: Service;
   
   private cts700Modbus: CTS700Modbus;
   private readonly updateInterval: ReturnType<typeof setInterval>;
@@ -42,6 +44,20 @@ export class CompactPPlatformAccessory {
     this.dhwThermostatService = this.setUpDHWThermostat(platform, accessory);
     this.outsideTemperatureSensorService = this.setUpOutsideTemperatureSensor(platform, accessory);
     this.panelTemperatureSensorService = this.setUpPanelTemperatureSensor(platform, accessory);
+    this.inletFilterMaintenanceService = this.setUpFilterMaintenance(
+      platform,
+      accessory,
+      'Inlet Filter',
+      'compact-p-inlet-filter',
+      () => this.cts700Modbus.resetInletFilter(),
+    );
+    this.outletFilterMaintenanceService = this.setUpFilterMaintenance(
+      platform,
+      accessory,
+      'Outlet Filter',
+      'compact-p-outlet-filter',
+      () => this.cts700Modbus.resetOutletFilter(),
+    );
 
     this.updateInterval = setInterval(() => {
       void this.updateFromDevice(platform);
@@ -209,6 +225,29 @@ export class CompactPPlatformAccessory {
     return panelTemperatureSensorService;
   }
 
+  private setUpFilterMaintenance(
+    platform: NilanHomebridgePlatform,
+    accessory: PlatformAccessory,
+    name: string,
+    subtype: string,
+    reset: () => Promise<number>,
+  ): Service {
+    const filterMaintenanceService = this.accessory.getServiceById(platform.Service.FilterMaintenance, subtype) ||
+      accessory.addService(platform.Service.FilterMaintenance, name, subtype);
+
+    const c = platform.Characteristic;
+    filterMaintenanceService.getCharacteristic(c.ResetFilterIndication)
+      .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        if (value !== 1) {
+          callback(null);
+          return;
+        }
+        this.handleWrite(() => reset(), value as number, `${name} reset`, callback);
+      });
+
+    return filterMaintenanceService;
+  }
+
   private async updateFromDevice(platform: NilanHomebridgePlatform) {
     if (this.updateInProgress) {
       this.platform.log.debug('Skipping device update because the previous poll is still running.');
@@ -227,6 +266,18 @@ export class CompactPPlatformAccessory {
       this.panelTemperatureSensorService.updateCharacteristic(c.CurrentTemperature, readings.panelTemperature);
       this.ventilationThermostatService.updateCharacteristic(c.CurrentRelativeHumidity, readings.actualHumidity);
       this.dhwThermostatService.updateCharacteristic(c.CurrentTemperature, readings.dhwTankTopTemperature);
+      this.updateFilterMaintenance(
+        this.inletFilterMaintenanceService,
+        readings.inletFilterElapsedDays,
+        readings.inletFilterReplacementInterval,
+        c,
+      );
+      this.updateFilterMaintenance(
+        this.outletFilterMaintenanceService,
+        readings.outletFilterElapsedDays,
+        readings.outletFilterReplacementInterval,
+        c,
+      );
 
       // The schedule only has minute precision, so we can ignore checks if at least a minute didn't pass. 
       const normalizedDateTime = readings.currentDateTime;
@@ -307,6 +358,21 @@ export class CompactPPlatformAccessory {
     } finally {
       this.updateInProgress = false;
     }
+  }
+
+  private updateFilterMaintenance(
+    service: Service,
+    elapsedDays: number,
+    replacementInterval: number,
+    c: NilanHomebridgePlatform['Characteristic'],
+  ): void {
+    const remainingDays = Math.max(0, replacementInterval - elapsedDays);
+    const filterLifeLevel = Math.round(remainingDays / replacementInterval * 100);
+    const changeIndication = elapsedDays >= replacementInterval
+      ? c.FilterChangeIndication.CHANGE_FILTER
+      : c.FilterChangeIndication.FILTER_OK;
+    service.updateCharacteristic(c.FilterLifeLevel, filterLifeLevel);
+    service.updateCharacteristic(c.FilterChangeIndication, changeIndication);
   }
 
   private async handleWrite<T extends WriterParameter, R extends WriterParameter>(

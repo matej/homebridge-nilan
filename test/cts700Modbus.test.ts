@@ -136,6 +136,10 @@ describe('CTS700Modbus reads', () => {
         [Register.OutdoorTemperature, 0xffc9],
         [Register.PanelTemperature, 203],
         [Register.ActualHumidity, 48],
+        [Register.InletFilterReplacementInterval, 90],
+        [Register.InletFilterElapsedDays, 59],
+        [Register.OutletFilterReplacementInterval, 90],
+        [Register.OutletFilterElapsedDays, 90],
         [Register.DHWTopTankTemperature, 521],
       ]);
       if (address === Register.CurrentTime) {
@@ -149,6 +153,10 @@ describe('CTS700Modbus reads', () => {
       outdoorTemperature: -5.5,
       panelTemperature: 20.3,
       actualHumidity: 48,
+      inletFilterReplacementInterval: 90,
+      inletFilterElapsedDays: 59,
+      outletFilterReplacementInterval: 90,
+      outletFilterElapsedDays: 90,
       dhwTankTopTemperature: 52.1,
       currentDateTime: {
         second: 30,
@@ -326,6 +334,8 @@ describe('CTS700Modbus writes', () => {
     await expect(modbus.writeFanSpeed(55.9)).resolves.toBe(55);
     await expect(modbus.writeRoomTemperatureSetPoint(21.5)).resolves.toBe(215);
     await expect(modbus.writeDHWSetPoint(52)).resolves.toBe(520);
+    await expect(modbus.resetInletFilter()).resolves.toBe(1);
+    await expect(modbus.resetOutletFilter()).resolves.toBe(1);
     await expect(modbus.writePauseOption(PauseOption.All)).resolves.toBe(PauseOption.All);
     await expect(modbus.writeVentilationMode(VentilationMode.Cooling)).resolves.toBe(VentilationMode.Cooling);
 
@@ -333,6 +343,8 @@ describe('CTS700Modbus writes', () => {
       [Register.FanSpeed, 55],
       [Register.RoomTemperatureSetPoint, 215],
       [Register.DHWTemperatureSetPoint, 520],
+      [Register.InletFilterReset, 1],
+      [Register.OutletFilterReset, 1],
       [Register.Pause, PauseOption.All],
       [Register.VentilationMode, VentilationMode.Cooling],
     ]);

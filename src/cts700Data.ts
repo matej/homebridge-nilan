@@ -19,6 +19,14 @@ export enum Register {
 	OutdoorTemperature = 5152,
 	// ActualHumidity is ID of register holding actual humidity value
 	ActualHumidity = 4716,
+	// Software filter replacement intervals and elapsed times are measured in days.
+	InletFilterReplacementInterval = 1326,
+	OutletFilterReplacementInterval = 1327,
+	InletFilterElapsedDays = 1328,
+	OutletFilterElapsedDays = 1329,
+	// Writing 1 resets the corresponding software filter elapsed-time counter.
+	InletFilterReset = 4756,
+	OutletFilterReset = 4757,
 	// DHWTopTankTemperature is ID of register holding T11 top DHW tank temperature
 	DHWTopTankTemperature = 5162,
 	// DHWBottomTankTemperature is ID of register holding T12 bottom DHW tank temperature
@@ -133,6 +141,11 @@ export interface Readings {
 	panelTemperature: number;
 	// Actual humidity of air (0-100%)
 	actualHumidity: number;
+	// Software filter replacement intervals and elapsed times in days.
+	inletFilterReplacementInterval: number;
+	inletFilterElapsedDays: number;
+	outletFilterReplacementInterval: number;
+	outletFilterElapsedDays: number;
 	// DHW tank top temperature in C times 10
 	dhwTankTopTemperature: number;
 	// Current device time.
