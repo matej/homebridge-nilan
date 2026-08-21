@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
   <a href="https://homebridge.io"><img src="https://raw.githubusercontent.com/homebridge/branding/latest/logos/homebridge-color-round.png" height="70" alt="Homebridge logo"></a>
   &nbsp;
   <a href="https://www.nilan.dk"><img src="resources/images/nilan-logo.png" height="70" alt="Nilan logo"></a>
