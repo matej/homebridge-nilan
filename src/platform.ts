@@ -1,4 +1,4 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
+import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { CompactPPlatformAccessory } from './compactPAccessory';
@@ -9,6 +9,7 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
 
   // This is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
+  private readonly accessoryHandlers = new Map<string, CompactPPlatformAccessory>();
 
   constructor(
     public readonly log: Logger,
@@ -25,6 +26,11 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
     this.api.on('didFinishLaunching', () => {
       this.discoverDevices();
     });
+    this.api.on('shutdown', () => {
+      for (const handler of this.accessoryHandlers.values()) {
+        handler.shutdown();
+      }
+    });
   }
 
   /**
@@ -35,6 +41,12 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
     this.log.info('Loading accessory from cache:', accessory.displayName);
     // add the restored accessory to the accessories cache so we can track if it has already been registered
     this.accessories.push(accessory);
+  }
+
+  private setUpAccessory(accessory: PlatformAccessory): void {
+    if (!this.accessoryHandlers.has(accessory.UUID)) {
+      this.accessoryHandlers.set(accessory.UUID, new CompactPPlatformAccessory(this, accessory));
+    }
   }
 
   /**
@@ -48,6 +60,7 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
       return;
     }
 
+    const configuredHosts = new Set<string>();
     for (const device of devices) {
       const host = device.host;
       const name = device.name;
@@ -55,6 +68,11 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
         this.log.warn('Encountered a device without required attributes (name / host). Skipping it.');
         continue;
       }
+      if (configuredHosts.has(host)) {
+        this.log.warn('Encountered duplicate device host in configuration:', host, 'Skipping it.');
+        continue;
+      }
+      configuredHosts.add(host);
 
       // We're using the IP as the UUID to avoid making network requests at this point.
       // The IP is a static one. It can technically be changed in the device settings, but that's
@@ -74,7 +92,7 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new CompactPPlatformAccessory(this, existingAccessory);
+        this.setUpAccessory(existingAccessory);
           
         // update accessory cache with any changes to the accessory details and information
         this.api.updatePlatformAccessories([existingAccessory]);
@@ -87,18 +105,23 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `compactPAccessory.ts`
-        new CompactPPlatformAccessory(this, accessory);
+        this.setUpAccessory(accessory);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        this.accessories.push(accessory);
       }
     }
 
     // Remove existing accessories that were removed from the configuration.
-    for (const existingAccessory of this.accessories) {
-      if (devices.find(device => device.host === existingAccessory.context.device.host) === undefined) {
+    for (let index = this.accessories.length - 1; index >= 0; index--) {
+      const existingAccessory = this.accessories[index];
+      if (!configuredHosts.has(existingAccessory.context.device?.host)) {
+        this.accessoryHandlers.get(existingAccessory.UUID)?.shutdown();
+        this.accessoryHandlers.delete(existingAccessory.UUID);
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
         this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
+        this.accessories.splice(index, 1);
       }
     }
   }

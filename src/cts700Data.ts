@@ -40,9 +40,13 @@ export enum Register {
 	// Current Date-Time value.
 	CurrentTime = 4722,
 	// First 14 program records of Week Program.
-	FistWeekProgram = 573,
+	FirstWeekProgram = 573,
+	// Kept as an alias for consumers compiled against the original typo.
+	FistWeekProgram = FirstWeekProgram,
 	// Second 14 program records of Week Program.
 	SecondWeekProgram = 643,
+	// Third 14 program records of Week Program.
+	ThirdWeekProgram = 713,
 	// The MAC address for main board device.
 	// Reg1 Hi-byte: MAC 1-st byte
 	// Reg1 Lo-byte: MAC 2-nd byte
@@ -111,7 +115,7 @@ export interface Settings {
 	fanSpeed: number;
 	// Desired room temperature in C (5-40) times 10
 	roomTemperatureSetPoint: number;
-	// Desired DHW temperature in C (10-60) times 10
+	// Desired DHW temperature in C (10-65) times 10
 	dhwTemperatureSetPoint: number;
 	// Ventilation mode indicates automatic or forced aur conditioning operation
 	ventilationMode: VentilationMode;
@@ -170,4 +174,3 @@ export interface WeekScheduleRecord {
 	// 0 ÷ 100 (%)
 	fanSpeed: number;
 }
-

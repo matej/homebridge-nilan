@@ -1,5 +1,4 @@
 import ModbusRTU from 'modbus-serial';
-import { throttle } from 'throttle-debounce';
 import { ReadRegisterResult, WriteRegisterResult } from 'modbus-serial/ModbusRTU';
 import {
   DateTime, 
@@ -13,12 +12,11 @@ import {
   WeekScheduleRecord,
 } from './cts700Data';
 
-export declare type WriterParameterTypes = number | PauseOption | OperationMode;
-export declare type NumericWriter = (value: WriterParameterTypes) => Promise<WriterParameterTypes>;
-
 export class CTS700Modbus {
 
   private client: ModbusRTU | null = null;
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private disposed = false;
 
   private networkErrors = [
     'ESOCKETTIMEDOUT',
@@ -44,12 +42,19 @@ export class CTS700Modbus {
     this.connect();
   }
 
-  private connect() {
+  private connect(): void {
+    if (this.disposed) {
+      return;
+    }
     this.client = null;
 
     const client = new ModbusRTU();
     client.connectTCP(this.host, { port: 502 })
       .then(() => {
+        if (this.disposed) {
+          client.close();
+          return;
+        }
         client.setID(1);
         client.setTimeout(5000);
         this.client = client;
@@ -60,22 +65,48 @@ export class CTS700Modbus {
       });
   }
 
-  private throttledReconnect = throttle(10000, () => {
-    if (this.client !== null && this.client.isOpen) {
-      this.client.close(() => {
-        this.connect();
-      });
-    } else {
-      this.connect();
+  private scheduleReconnect(): void {
+    if (this.disposed || this.reconnectTimer !== undefined) {
+      return;
     }
-  });
 
-  // eslint-disable-next-line
-    private checkError(e: any, forceRetry: boolean = false) {
-    if((e.message && this.networkErrors.includes(e.message))
-          || (e.errno && this.networkErrors.includes(e.errno)) 
-          || forceRetry) {
-      this.throttledReconnect();
+    const client = this.client;
+    this.client = null;
+    if (client?.isOpen) {
+      client.close();
+    }
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      this.connect();
+    }, 10000);
+  }
+
+  private checkError(error: unknown, forceRetry: boolean = false): void {
+    const networkError = typeof error === 'object' && error !== null ? error as NodeJS.ErrnoException : undefined;
+    const errorValues = [
+      networkError?.code,
+      networkError?.errno?.toString(),
+      networkError?.message,
+      typeof error === 'string' ? error : undefined,
+    ];
+    const shouldRetry = this.networkErrors.some(code => errorValues.some(value => value?.includes(code)));
+    if (forceRetry || shouldRetry) {
+      this.scheduleReconnect();
+    }
+  }
+
+  public close(): void {
+    this.disposed = true;
+    if (this.reconnectTimer !== undefined) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+
+    const client = this.client;
+    this.client = null;
+    if (client?.isOpen) {
+      client.close();
     }
   }
 
@@ -114,10 +145,14 @@ export class CTS700Modbus {
   }
 
   async fetchActiveWeekProgramForDateTime(dateTime: DateTime): Promise<WeekScheduleRecord | null> {
-    const weekSchedule = await this.readWeekProgramRegister(Register.FistWeekProgram, 14);
-    if (weekSchedule.length === 14) {
-      const secondWeekSchedule = await this.readWeekProgramRegister(Register.SecondWeekProgram, 14);
-      weekSchedule.concat(secondWeekSchedule);
+    const weekSchedule = Array<WeekScheduleRecord>();
+    const weekProgramRegisters = [Register.FirstWeekProgram, Register.SecondWeekProgram, Register.ThirdWeekProgram];
+    for (const register of weekProgramRegisters) {
+      const records = await this.readWeekProgramRegister(register, 14);
+      weekSchedule.push(...records);
+      if (records.length < 14) {
+        break;
+      }
     }
     return this.findCurrentActiveWeekRecord(weekSchedule, dateTime);
   }
@@ -280,7 +315,7 @@ export class CTS700Modbus {
   }
 
   public async writeDHWSetPoint(value: number): Promise<number> {
-    if (value < 5 || value > 65) {
+    if (value < 10 || value > 65) {
       throw Error('Value outside of acceptable range.');
     }
     return this.writeTemperatureRegister(Register.DHWTemperatureSetPoint, value);
@@ -291,6 +326,14 @@ export class CTS700Modbus {
       throw Error('Invalid pause option value.');
     }
     return this.writeSingleRegister(Register.Pause, value);
+  }
+
+  public async writeVentilationPaused(paused: boolean): Promise<PauseOption> {
+    return this.writePauseComponent(PauseOption.Ventilation, paused);
+  }
+
+  public async writeDHWPaused(paused: boolean): Promise<PauseOption> {
+    return this.writePauseComponent(PauseOption.DHW, paused);
   }
 
   public async writeVentilationMode(value: VentilationMode): Promise<VentilationMode> {
@@ -309,9 +352,15 @@ export class CTS700Modbus {
   }
 
   private async writeTemperatureRegister(register: Register, value: number): Promise<number> {
-    // Convert to modbus format (adjust negative values and get rid of floating point precision)
-    const modbusValue = Math.floor(value < 0 ? (value * 10) + 65535 : (value * 10));
+    const signedValue = Math.round(value * 10);
+    const modbusValue = signedValue < 0 ? signedValue + 0x10000 : signedValue;
     return this.writeSingleRegister(register, modbusValue);
+  }
+
+  private async writePauseComponent(component: PauseOption, paused: boolean): Promise<PauseOption> {
+    const current = await this.readPauseRegister(Register.Pause);
+    const updated = paused ? current | component : current & ~component;
+    return this.writePauseOption(updated as PauseOption);
   }
 
   private async writeSingleRegister(register: Register, value: number): Promise<number> {
@@ -341,39 +390,17 @@ export class CTS700Modbus {
     } else if (records.length === 1) {
       return records[0];
     }
-    // We create a fake schedule record based on the current time.
-    // After sorting we just take the preceding entry as the currently
-    // active schedule record.
-    const fakeRecord: WeekScheduleRecord = {
-      weekDay: time.weekDay,
-      hour: time.hour,
-      minute: time.minute,
-      temperature: Number.MAX_SAFE_INTEGER,
-      dhwTemperature: Number.MAX_SAFE_INTEGER,
-      flags: Number.MAX_SAFE_INTEGER,
-      fanSpeed: Number.MAX_SAFE_INTEGER,
-    };
+    const minuteOfWeek = (value: Pick<DateTime, 'weekDay' | 'hour' | 'minute'>) =>
+      ((value.weekDay - 1) * 24 * 60) + (value.hour * 60) + value.minute;
+    const currentMinute = minuteOfWeek(time);
+    const sortedRecords = [...records].sort((a, b) => minuteOfWeek(a) - minuteOfWeek(b));
 
-    records.push(fakeRecord);
-
-    records.sort(
-      (a, b) => {          
-        if (a.weekDay === b.weekDay) {
-          if (a.hour === b.hour) {
-            if (a.minute === b.minute) {
-              return a.temperature > b.temperature ? 1 : -1;
-            }
-            return a.minute > b.minute ? 1 : -1;
-          }
-          return a.hour > b.hour ? 1 : -1;
-        }
-        return a.weekDay > b.weekDay ? 1 : -1;
-      });
-      
-    const index = records.indexOf(fakeRecord);
-    if (index === 0) {
-      return records[records.length - 1];
+    for (let index = sortedRecords.length - 1; index >= 0; index--) {
+      if (minuteOfWeek(sortedRecords[index]) <= currentMinute) {
+        return sortedRecords[index];
+      }
     }
-    return records[index - 1];
+
+    return sortedRecords[sortedRecords.length - 1];
   }
 }
