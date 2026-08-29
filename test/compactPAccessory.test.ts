@@ -53,7 +53,7 @@ class FakeService {
   }
 }
 
-function createHarness(schedule = false, readingOverrides: Partial<Readings> = {}) {
+function createHarness(schedule = false, readingOverrides: Partial<Readings> = {}, contextOverrides: Record<string, unknown> = {}) {
   const Characteristic = {
     Active: Object.assign(Symbol('Active'), { ACTIVE: 1, INACTIVE: 0 }),
     CurrentHeatingCoolingState: Object.assign(Symbol('CurrentHeatingCoolingState'), { COOL: 2, HEAT: 1, OFF: 0 }),
@@ -86,11 +86,14 @@ function createHarness(schedule = false, readingOverrides: Partial<Readings> = {
       services.set(subtype, service);
       return service;
     }),
-    context: { device: { host: '192.0.2.1', schedule } },
+    context: { device: { host: '192.0.2.1', schedule }, ...contextOverrides },
     getService: vi.fn(() => informationService),
     getServiceById: vi.fn((_type: unknown, subtype: string) => services.get(subtype)),
   };
   const platform = {
+    api: {
+      updatePlatformAccessories: vi.fn(),
+    },
     Characteristic,
     Service: ServiceTypes,
     log: {
@@ -336,6 +339,66 @@ describe('CompactPPlatformAccessory', () => {
 
     expect(modbus.writeVentilationPaused).toHaveBeenCalledWith(false);
     expect(modbus.writeFanSpeed).toHaveBeenCalledWith(50);
+  });
+
+  it('persists and restores a recent room-temperature override', async () => {
+    const first = createHarness(true);
+    first.modbus.fetchSettings.mockResolvedValue({
+      ...await first.modbus.fetchSettings(),
+      systemWorkingMode: SystemWorkingMode.Auto,
+    });
+    first.modbus.fetchSettings.mockClear();
+    first.modbus.fetchActiveWeekProgramForDateTime.mockResolvedValue({
+      dhwTemperature: 48,
+      fanSpeed: 40,
+      flags: 0,
+      hour: 3,
+      minute: 0,
+      temperature: 20,
+      weekDay: 5,
+    });
+
+    await vi.advanceTimersByTimeAsync(10000);
+    await invokeSet(first.services.get('compact-p-temperature')!, first.Characteristic.TargetTemperature, 23);
+    first.modbus.fetchSettings.mockResolvedValue({
+      ...await first.modbus.fetchSettings(),
+      roomTemperatureSetPoint: 23,
+    });
+    first.modbus.fetchSettings.mockClear();
+    await vi.advanceTimersByTimeAsync(10000);
+
+    const snapshot = first.accessory.context.targetResolverState;
+    expect(snapshot).toBeDefined();
+    expect(first.platform.api.updatePlatformAccessories).toHaveBeenCalled();
+    first.handler.shutdown();
+
+    const restored = createHarness(
+      true,
+      { currentDateTime: { second: 1, minute: 3, hour: 3, day: 4, weekDay: 5, month: 6, year: 26 } },
+      { targetResolverState: snapshot },
+    );
+    restored.modbus.fetchSettings.mockResolvedValue({
+      ...await restored.modbus.fetchSettings(),
+      roomTemperatureSetPoint: 23,
+      systemWorkingMode: SystemWorkingMode.Auto,
+    });
+    restored.modbus.fetchSettings.mockClear();
+    restored.modbus.fetchActiveWeekProgramForDateTime.mockResolvedValue({
+      dhwTemperature: 48,
+      fanSpeed: 40,
+      flags: 0,
+      hour: 3,
+      minute: 0,
+      temperature: 20,
+      weekDay: 5,
+    });
+
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(restored.services.get('compact-p-temperature')!.updates.at(-1)).toEqual([
+      restored.Characteristic.TargetTemperature,
+      23,
+    ]);
   });
 
   it('resets inlet and outlet filter counters from HomeKit', async () => {

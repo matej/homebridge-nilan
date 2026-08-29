@@ -138,6 +138,12 @@ next schedule entry resumes control. The plugin tracks those changes
 independently for room and hot-water targets. Set the option to `false` if no
 week program is configured.
 
+While a known room or hot-water override is active, the plugin checkpoints it
+in Homebridge's cached accessory context. A restart restores that state only
+when the controller time advanced by no more than 15 minutes and the complete
+active schedule record and user targets are unchanged. Expired, malformed, or
+ambiguous state is discarded in favor of the active schedule.
+
 HomeKit fan speed reports the controller's effective inlet-fan output rather
 than attempting to infer whether the schedule or user register selected it.
 Consequently, humidity control, cooling, balancing, and other automatic
