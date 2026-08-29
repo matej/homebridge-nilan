@@ -22,8 +22,6 @@ export enum Register {
 	OutdoorTemperature = 5152,
 	// ActualHumidity is ID of register holding actual humidity value
 	ActualHumidity = 4716,
-	// Current inlet-fan control output (0-100%). This is an observed output, not a target.
-	InletFanControl = 4699,
 	// Software filter replacement intervals and elapsed times are measured in days.
 	InletFilterReplacementInterval = 1326,
 	OutletFilterReplacementInterval = 1327,
@@ -157,8 +155,6 @@ export interface Readings {
 	panelTemperature: number;
 	// Actual humidity of air (0-100%)
 	actualHumidity: number;
-	// Current inlet-fan control output (0-100%).
-	inletFanControl: number;
 	// Software filter replacement intervals and elapsed times in days.
 	inletFilterReplacementInterval: number;
 	inletFilterElapsedDays: number;

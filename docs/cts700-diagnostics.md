@@ -73,8 +73,9 @@ not identify whether a scheduled or temporary user target is currently active.
 
 The plugin therefore treats changes to user registers as overrides whether they
 originate in HomeKit, the control-unit UI, or another Modbus client. Overrides
-remain active until the selected schedule record changes. For fan speed only,
-register 4699 can corroborate an override after restart or when the UI reapplies
-the existing register 4747 value. It is not treated as a target because automatic
-humidity, cooling, fan balancing, and other controller functions can modify the
-actual output.
+remain active until the selected schedule record changes. Register 4699 remains
+useful diagnostic evidence, but is not used to infer target ownership because
+automatic humidity, cooling, fan balancing, and other controller functions can
+modify the actual output. Consequently, an override already active when the
+plugin starts—or an unchanged value reapplied through the control-unit UI—is
+ambiguous and HomeKit conservatively displays the active schedule target.

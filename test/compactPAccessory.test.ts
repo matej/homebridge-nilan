@@ -104,7 +104,6 @@ function createHarness(schedule = false, readingOverrides: Partial<Readings> = {
     fetchMetadata: vi.fn().mockResolvedValue({ macAddress: '00:11:22:33:44:55', softwareVersion: '1.2.3' }),
     fetchReadings: vi.fn().mockResolvedValue({
       actualHumidity: 48,
-      inletFanControl: 60,
       inletFilterReplacementInterval: 90,
       inletFilterElapsedDays: 59,
       outletFilterReplacementInterval: 90,
@@ -217,7 +216,7 @@ describe('CompactPPlatformAccessory', () => {
   });
 
   it('reads automatic targets from the week schedule without writing them to user registers', async () => {
-    const { Characteristic, modbus, services } = createHarness(true, { inletFanControl: 40 });
+    const { Characteristic, modbus, services } = createHarness(true);
     modbus.fetchSettings.mockResolvedValue({
       dhwTemperatureSetPoint: 50,
       fanSpeed: 60,
@@ -260,7 +259,7 @@ describe('CompactPPlatformAccessory', () => {
   });
 
   it('keeps an explicit HomeKit fan override while the active schedule record is unchanged', async () => {
-    const { Characteristic, modbus, services } = createHarness(true, { inletFanControl: 40 });
+    const { Characteristic, modbus, services } = createHarness(true);
     modbus.fetchSettings.mockResolvedValue({
       dhwTemperatureSetPoint: 50,
       fanSpeed: 60,
@@ -332,7 +331,6 @@ describe('CompactPPlatformAccessory', () => {
 
     resolveReadings!({
       actualHumidity: 48,
-      inletFanControl: 60,
       inletFilterReplacementInterval: 90,
       inletFilterElapsedDays: 59,
       outletFilterReplacementInterval: 90,

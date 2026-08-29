@@ -41,7 +41,6 @@ export class CTS700TargetResolver {
   public resolveAutomaticTargets(
     userTargets: UserTargets,
     schedule: WeekScheduleRecord | null,
-    inletFanControl: number,
   ): ResolvedTargets {
     const scheduleChanged = this.previousSchedule !== undefined && !isDeepStrictEqual(schedule, this.previousSchedule);
     if (scheduleChanged) {
@@ -49,9 +48,6 @@ export class CTS700TargetResolver {
     }
 
     this.detectChangedUserTargets(userTargets);
-    if (!scheduleChanged) {
-      this.inferFanOverride(userTargets, schedule, inletFanControl);
-    }
 
     this.previousSchedule = schedule;
     this.previousUserTargets = { ...userTargets };
@@ -84,18 +80,6 @@ export class CTS700TargetResolver {
       if (userTargets[target] !== this.previousUserTargets[target]) {
         this.userOverrides[target] = true;
       }
-    }
-  }
-
-  private inferFanOverride(userTargets: UserTargets, schedule: WeekScheduleRecord | null, inletFanControl: number): void {
-    if (schedule === null || this.userOverrides.fanSpeed || userTargets.fanSpeed === schedule.fanSpeed) {
-      return;
-    }
-
-    const matchesUserTarget = Math.abs(inletFanControl - userTargets.fanSpeed) <= 1;
-    const matchesScheduleTarget = Math.abs(inletFanControl - schedule.fanSpeed) <= 1;
-    if (matchesUserTarget && !matchesScheduleTarget) {
-      this.userOverrides.fanSpeed = true;
     }
   }
 

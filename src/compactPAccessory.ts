@@ -317,7 +317,6 @@ export class CompactPPlatformAccessory {
         displayedTargets = this.targetResolver.resolveAutomaticTargets(
           userTargets,
           this.processedSchedule,
-          readings.inletFanControl,
         );
         this.platform.log.debug('Resolved automatic targets:', displayedTargets);
       } else {

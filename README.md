@@ -135,9 +135,11 @@ The CTS 700 keeps scheduled and user targets separately: a change from HomeKit,
 the control-unit UI, or another Modbus client temporarily overrides the active
 schedule without leaving automatic working mode, and the next schedule entry
 resumes control. The plugin tracks those changes independently for fan, room,
-and hot-water targets. It uses the inlet fan output as a limited fan-only hint
-after startup or when the UI reapplies an unchanged value. Set the option to
-`false` if no week program is configured.
+and hot-water targets. Because the controller exposes no active-target source,
+an override already active when Homebridge starts—or an unchanged value reapplied
+through the control-unit UI—cannot be identified safely. HomeKit displays the
+schedule until a user-register change is observed. Set the option to `false` if
+no week program is configured.
 
 ## Troubleshooting
 
