@@ -341,6 +341,9 @@ export class CTS700Modbus {
   }
 
   public async writeFanSpeed(value: number): Promise<number> {
+    if (value < 20 || value > 100) {
+      throw Error('Value outside of acceptable range.');
+    }
     return this.writePercentageRegister(Register.FanSpeed, value);
   }
 

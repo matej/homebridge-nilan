@@ -355,6 +355,7 @@ describe('CTS700Modbus writes', () => {
   });
 
   it.each([
+    ['low fan speed', () => createModbus().then((modbus) => modbus.writeFanSpeed(19))],
     ['fan speed', () => createModbus().then((modbus) => modbus.writeFanSpeed(101))],
     ['room temperature', () => createModbus().then((modbus) => modbus.writeRoomTemperatureSetPoint(4.5))],
     ['low DHW temperature', () => createModbus().then((modbus) => modbus.writeDHWSetPoint(9.5))],

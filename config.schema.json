@@ -27,7 +27,7 @@
             "title": "Read week schedule",
             "type": "boolean",
             "default": true,
-            "description": "Enable this when a week schedule is programmed on the controller. The plugin reflects scheduled targets and temporary overrides from HomeKit or the control-unit UI without writing schedule values back to the controller."
+            "description": "Enable this when a week schedule is programmed on the controller. The plugin reflects scheduled temperature targets and temporary overrides from HomeKit or the control-unit UI without writing schedule values back to the controller. Fan speed always reports the controller's effective inlet-fan output."
           }
         }
       }
