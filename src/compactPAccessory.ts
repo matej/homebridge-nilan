@@ -93,14 +93,24 @@ export class CompactPPlatformAccessory {
     
     const c = platform.Characteristic;
     ventilationFanService.getCharacteristic(c.RotationSpeed).setProps({
-      minValue: 20,
+      minValue: 0,
       maxValue: 100,
-      minStep: 5,
+      minStep: 1,
     });
 
     ventilationFanService.getCharacteristic(c.RotationSpeed)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.handleTargetWrite('fanSpeed', next => this.cts700Modbus.writeFanSpeed(next), value as number, 'Rotation speed', callback);
+        const fanSpeed = value as number;
+        if (fanSpeed === 0) {
+          this.handleWrite(next => this.cts700Modbus.writeVentilationPaused(next), true, 'Ventilation pause', callback);
+          return;
+        }
+        this.handleWrite(
+          next => this.cts700Modbus.writeFanSpeed(next),
+          Math.max(20, fanSpeed),
+          'Rotation speed',
+          callback,
+        );
       });
 
     ventilationFanService.getCharacteristic(c.Active)
@@ -297,7 +307,6 @@ export class CompactPPlatformAccessory {
       this.platform.log.debug('Updating with settings:', settings);
 
       const userTargets: UserTargets = {
-        fanSpeed: settings.fanSpeed,
         roomTemperature: settings.roomTemperatureSetPoint,
         dhwTemperature: settings.dhwTemperatureSetPoint,
       };
@@ -317,7 +326,6 @@ export class CompactPPlatformAccessory {
         displayedTargets = this.targetResolver.resolveAutomaticTargets(
           userTargets,
           this.processedSchedule,
-          readings.inletFanControl,
         );
         this.platform.log.debug('Resolved automatic targets:', displayedTargets);
       } else {
@@ -364,7 +372,8 @@ export class CompactPPlatformAccessory {
         this.dhwThermostatService.updateCharacteristic(c.TargetHeatingCoolingState, c.TargetHeatingCoolingState.HEAT); 
       }
 
-      this.ventilationFanService.updateCharacteristic(c.RotationSpeed, displayedTargets.fanSpeed);
+      const ventilationPaused = settings.paused === PauseOption.Ventilation || settings.paused === PauseOption.All;
+      this.ventilationFanService.updateCharacteristic(c.RotationSpeed, ventilationPaused ? 0 : readings.inletFanControl);
       this.ventilationThermostatService.updateCharacteristic(c.TargetTemperature, displayedTargets.roomTemperature);
       this.dhwThermostatService.updateCharacteristic(c.TargetTemperature, displayedTargets.dhwTemperature);
     } catch (e) {

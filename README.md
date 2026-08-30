@@ -121,7 +121,7 @@ For manual configuration, add an entry to the `platforms` array in Homebridge's
 | `devices` | Yes | One or more Compact P controller definitions. |
 | `devices[].name` | Yes | Display name for the HomeKit accessory. |
 | `devices[].host` | Yes | IPv4 address of the controller. |
-| `devices[].schedule` | No | Read automatic setpoints and fan speed from the CTS 700 week program; defaults to `true`. |
+| `devices[].schedule` | No | Read automatic temperature setpoints from the CTS 700 week program; defaults to `true`. |
 
 Give each configured device a unique IP address. If you change a device's
 `host`, Homebridge treats it as a new accessory because the IP address is part
@@ -131,13 +131,22 @@ of its persistent identity.
 
 Enable `schedule` when a week program is active on the controller. The plugin
 reads the active entry and never writes its values back to the user registers.
-The CTS 700 keeps scheduled and user targets separately: a change from HomeKit,
-the control-unit UI, or another Modbus client temporarily overrides the active
-schedule without leaving automatic working mode, and the next schedule entry
-resumes control. The plugin tracks those changes independently for fan, room,
-and hot-water targets. It uses the inlet fan output as a limited fan-only hint
-after startup or when the UI reapplies an unchanged value. Set the option to
-`false` if no week program is configured.
+The CTS 700 keeps scheduled and user temperature targets separately: a change
+from HomeKit, the control-unit UI, or another Modbus client temporarily
+overrides the active schedule without leaving automatic working mode, and the
+next schedule entry resumes control. The plugin tracks those changes
+independently for room and hot-water targets. Set the option to `false` if no
+week program is configured.
+
+HomeKit fan speed reports the controller's effective inlet-fan output rather
+than attempting to infer whether the schedule or user register selected it.
+Consequently, humidity control, cooling, balancing, and other automatic
+functions can move the displayed speed away from the value requested in
+HomeKit. A HomeKit speed change writes the user target once; a different
+read-back value never causes a retry. Turning the fan off uses the CTS 700
+ventilation-pause control and preserves the configured user target. The
+controller accepts running targets from 20% through 100%; HomeKit requests from
+1% through 19% are normalized to 20%, while 0% pauses ventilation.
 
 ## Troubleshooting
 

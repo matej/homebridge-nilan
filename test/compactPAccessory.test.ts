@@ -194,6 +194,16 @@ describe('CompactPPlatformAccessory', () => {
     });
   });
 
+  it('supports the full effective fan-output range', () => {
+    const { Characteristic, services } = createHarness();
+
+    expect(services.get('compact-p-fan')!.getCharacteristic(Characteristic.RotationSpeed).props).toMatchObject({
+      minValue: 0,
+      maxValue: 100,
+      minStep: 1,
+    });
+  });
+
   it('polls readings and settings into HomeKit services', async () => {
     const { Characteristic, modbus, services } = createHarness();
 
@@ -259,7 +269,7 @@ describe('CompactPPlatformAccessory', () => {
     expect(services.get('compact-p-dhw')!.updates).toContainEqual([Characteristic.TargetTemperature, 50]);
   });
 
-  it('keeps an explicit HomeKit fan override while the active schedule record is unchanged', async () => {
+  it('reports effective fan output after a write without retrying the user target', async () => {
     const { Characteristic, modbus, services } = createHarness(true, { inletFanControl: 40 });
     modbus.fetchSettings.mockResolvedValue({
       dhwTemperatureSetPoint: 50,
@@ -282,10 +292,50 @@ describe('CompactPPlatformAccessory', () => {
 
     await vi.advanceTimersByTimeAsync(10000);
     await invokeSet(services.get('compact-p-fan')!, Characteristic.RotationSpeed, 60);
+    modbus.fetchReadings.mockResolvedValue({
+      ...await modbus.fetchReadings(),
+      inletFanControl: 63,
+    });
+    modbus.fetchReadings.mockClear();
     await vi.advanceTimersByTimeAsync(10000);
 
+    expect(modbus.writeFanSpeed).toHaveBeenCalledOnce();
     expect(modbus.writeFanSpeed).toHaveBeenCalledWith(60);
-    expect(services.get('compact-p-fan')!.updates.at(-1)).toEqual([Characteristic.RotationSpeed, 60]);
+    expect(services.get('compact-p-fan')!.updates.at(-1)).toEqual([Characteristic.RotationSpeed, 63]);
+  });
+
+  it('reports a ventilation pause as inactive with zero effective speed', async () => {
+    const { Characteristic, modbus, services } = createHarness(false, { inletFanControl: 60 });
+    modbus.fetchSettings.mockResolvedValue({
+      ...await modbus.fetchSettings(),
+      paused: PauseOption.Ventilation,
+    });
+    modbus.fetchSettings.mockClear();
+
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(services.get('compact-p-fan')!.updates).toContainEqual([Characteristic.Active, Characteristic.Active.INACTIVE]);
+    expect(services.get('compact-p-fan')!.updates).toContainEqual([Characteristic.RotationSpeed, 0]);
+  });
+
+  it('maps a zero speed request to ventilation pause and clamps a running request to the controller minimum', async () => {
+    const { Characteristic, modbus, services } = createHarness();
+
+    await invokeSet(services.get('compact-p-fan')!, Characteristic.RotationSpeed, 0);
+    await invokeSet(services.get('compact-p-fan')!, Characteristic.RotationSpeed, 10);
+
+    expect(modbus.writeVentilationPaused).toHaveBeenCalledWith(true);
+    expect(modbus.writeFanSpeed).toHaveBeenCalledWith(20);
+  });
+
+  it('handles the separate active and speed writes sent when HomeKit starts the fan', async () => {
+    const { Characteristic, modbus, services } = createHarness();
+
+    await invokeSet(services.get('compact-p-fan')!, Characteristic.Active, Characteristic.Active.ACTIVE);
+    await invokeSet(services.get('compact-p-fan')!, Characteristic.RotationSpeed, 50);
+
+    expect(modbus.writeVentilationPaused).toHaveBeenCalledWith(false);
+    expect(modbus.writeFanSpeed).toHaveBeenCalledWith(50);
   });
 
   it('resets inlet and outlet filter counters from HomeKit', async () => {

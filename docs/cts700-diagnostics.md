@@ -71,10 +71,10 @@ schedule value to inlet-fan output register 4699. System working mode 1047
 remained `AUTO` before and after the transition. Consequently, working mode does
 not identify whether a scheduled or temporary user target is currently active.
 
-The plugin therefore treats changes to user registers as overrides whether they
-originate in HomeKit, the control-unit UI, or another Modbus client. Overrides
-remain active until the selected schedule record changes. For fan speed only,
-register 4699 can corroborate an override after restart or when the UI reapplies
-the existing register 4747 value. It is not treated as a target because automatic
-humidity, cooling, fan balancing, and other controller functions can modify the
-actual output.
+The plugin therefore treats changes to user temperature registers as overrides
+whether they originate in HomeKit, the control-unit UI, or another Modbus
+client. Temperature overrides remain active until the selected schedule record
+changes. Fan speed does not use this inference: HomeKit reports inlet-fan output
+register 4699 directly. Automatic humidity, cooling, balancing, and other
+controller functions can therefore change the displayed fan speed without
+causing additional writes to user target register 4747.

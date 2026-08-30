@@ -3,7 +3,6 @@ import { isDeepStrictEqual } from 'node:util';
 import type { WeekScheduleRecord } from './cts700Data';
 
 export interface UserTargets {
-  fanSpeed: number;
   roomTemperature: number;
   dhwTemperature: number;
 }
@@ -19,7 +18,6 @@ export class CTS700TargetResolver {
   private previousSchedule: WeekScheduleRecord | null | undefined;
   private previousUserTargets?: UserTargets;
   private readonly userOverrides: Record<UserTarget, boolean> = {
-    fanSpeed: false,
     roomTemperature: false,
     dhwTemperature: false,
   };
@@ -41,7 +39,6 @@ export class CTS700TargetResolver {
   public resolveAutomaticTargets(
     userTargets: UserTargets,
     schedule: WeekScheduleRecord | null,
-    inletFanControl: number,
   ): ResolvedTargets {
     const scheduleChanged = this.previousSchedule !== undefined && !isDeepStrictEqual(schedule, this.previousSchedule);
     if (scheduleChanged) {
@@ -49,9 +46,6 @@ export class CTS700TargetResolver {
     }
 
     this.detectChangedUserTargets(userTargets);
-    if (!scheduleChanged) {
-      this.inferFanOverride(userTargets, schedule, inletFanControl);
-    }
 
     this.previousSchedule = schedule;
     this.previousUserTargets = { ...userTargets };
@@ -64,11 +58,9 @@ export class CTS700TargetResolver {
     }
 
     return {
-      fanSpeed: this.userOverrides.fanSpeed ? userTargets.fanSpeed : schedule.fanSpeed,
       roomTemperature: this.userOverrides.roomTemperature ? userTargets.roomTemperature : schedule.temperature,
       dhwTemperature: this.userOverrides.dhwTemperature ? userTargets.dhwTemperature : schedule.dhwTemperature,
       sources: {
-        fanSpeed: this.userOverrides.fanSpeed ? 'user' : 'schedule',
         roomTemperature: this.userOverrides.roomTemperature ? 'user' : 'schedule',
         dhwTemperature: this.userOverrides.dhwTemperature ? 'user' : 'schedule',
       },
@@ -87,18 +79,6 @@ export class CTS700TargetResolver {
     }
   }
 
-  private inferFanOverride(userTargets: UserTargets, schedule: WeekScheduleRecord | null, inletFanControl: number): void {
-    if (schedule === null || this.userOverrides.fanSpeed || userTargets.fanSpeed === schedule.fanSpeed) {
-      return;
-    }
-
-    const matchesUserTarget = Math.abs(inletFanControl - userTargets.fanSpeed) <= 1;
-    const matchesScheduleTarget = Math.abs(inletFanControl - schedule.fanSpeed) <= 1;
-    if (matchesUserTarget && !matchesScheduleTarget) {
-      this.userOverrides.fanSpeed = true;
-    }
-  }
-
   private clearUserOverrides(): void {
     for (const target of Object.keys(this.userOverrides) as UserTarget[]) {
       this.userOverrides[target] = false;
@@ -107,7 +87,6 @@ export class CTS700TargetResolver {
 
   private sources(source: TargetSource): Record<UserTarget, TargetSource> {
     return {
-      fanSpeed: source,
       roomTemperature: source,
       dhwTemperature: source,
     };
