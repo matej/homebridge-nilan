@@ -135,11 +135,11 @@ export interface Settings {
 	systemWorkingMode: SystemWorkingMode;
     // Paused tells if operation is currently paused
 	paused: PauseOption;
-	// Fan speed of ventilation (20-100)
+	// User fan-speed register after decoding (0-100%; explicit writes are limited to 20-100%).
 	fanSpeed: number;
-	// Desired room temperature in C (5-40) times 10
+	// Desired room temperature after decoding (5-50°C).
 	roomTemperatureSetPoint: number;
-	// Desired DHW temperature in C (10-65) times 10
+	// Desired DHW temperature after decoding (10-65°C).
 	dhwTemperatureSetPoint: number;
 	// Ventilation mode indicates automatic or forced aur conditioning operation
 	ventilationMode: VentilationMode;
@@ -149,11 +149,11 @@ export interface Settings {
 
 // Readings from Nilan sensors
 export interface Readings {
-	// Room temperature in C times 10
+	// Room temperature after decoding in °C.
 	roomTemperature: number;
-	// Outdoor temperature in C times 10
+	// Outdoor temperature after decoding in °C.
 	outdoorTemperature: number;
-	// Panel temperature in C times 10
+	// Panel temperature after decoding in °C.
 	panelTemperature: number;
 	// Actual humidity of air (0-100%)
 	actualHumidity: number;
@@ -164,7 +164,7 @@ export interface Readings {
 	inletFilterElapsedDays: number | null;
 	outletFilterReplacementInterval: number | null;
 	outletFilterElapsedDays: number | null;
-	// DHW tank top temperature in C times 10
+	// DHW tank top temperature after decoding in °C.
 	dhwTankTopTemperature: number;
 	// Current device time.
 	currentDateTime: DateTime;
@@ -196,9 +196,9 @@ export interface WeekScheduleRecord {
 	hour: number;
 	// Minutes (0 ÷ 59)
 	minute: number;
-	// 50 ÷ 500 (5ºC ÷ 50ºC)
+	// Room target after decoding (5°C ÷ 50°C).
 	temperature: number;
-	// 100 ÷ 600 (10ºC ÷ 60ºC)
+	// DHW target after decoding (10°C ÷ 60°C).
 	dhwTemperature: number;
 	// Flag bitmask
 	flags: number;

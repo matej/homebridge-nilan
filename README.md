@@ -1,7 +1,7 @@
 <p align="left">
   <a href="https://homebridge.io"><img src="https://raw.githubusercontent.com/homebridge/branding/latest/logos/homebridge-color-round.png" height="70" alt="Homebridge logo"></a>
   &nbsp;
-  <a href="https://www.nilan.dk"><img src="resources/images/nilan-logo.png" height="70" alt="Nilan logo"></a>
+  <a href="https://www.nilan.dk"><img src="https://raw.githubusercontent.com/matej/homebridge-nilan/master/resources/images/nilan-logo.png" height="70" alt="Nilan logo"></a>
 </p>
 
 # Homebridge Nilan
@@ -35,11 +35,11 @@ polls the controller every 10 seconds.
 
 ### Apple Home
 
-<img src="resources/screenshots/1.png" height="300" alt="Screenshot Apple Home App"> <img src="resources/screenshots/2.png" height="300" alt="Screenshot Apple Home App"> <img src="resources/screenshots/3.png" height="300" alt="Screenshot Apple Home App"> 
+<img src="https://raw.githubusercontent.com/matej/homebridge-nilan/master/resources/screenshots/1.png" height="300" alt="Screenshot Apple Home App"> <img src="https://raw.githubusercontent.com/matej/homebridge-nilan/master/resources/screenshots/2.png" height="300" alt="Screenshot Apple Home App"> <img src="https://raw.githubusercontent.com/matej/homebridge-nilan/master/resources/screenshots/3.png" height="300" alt="Screenshot Apple Home App">
 
 ### Eve
 
-<img src="resources/screenshots/4.png" height="300" alt="Screenshot Elgato Eve App"> <img src="resources/screenshots/5.png" height="300" alt="Screenshot Elgato Eve App">
+<img src="https://raw.githubusercontent.com/matej/homebridge-nilan/master/resources/screenshots/4.png" height="300" alt="Screenshot Elgato Eve App"> <img src="https://raw.githubusercontent.com/matej/homebridge-nilan/master/resources/screenshots/5.png" height="300" alt="Screenshot Elgato Eve App">
 
 ## Supported Devices
 
@@ -51,7 +51,7 @@ implementation follows Nilan's *CTS 700 Modbus Registers Description*, revision
 2.01 (last updated 2016-03-11). Nilan no longer hosts it at its original URL, but
 a [preserved copy is available from the Internet Archive](https://web.archive.org/web/20250204012946id_/https://symlink.dk/stuff/CTS700_MODBUS-rev%202.01.pdf).
 
-<img src="resources/images/nilan-compact-p.png" height="200" alt="Nilan Compact P">
+<img src="https://raw.githubusercontent.com/matej/homebridge-nilan/master/resources/images/nilan-compact-p.png" height="200" alt="Nilan Compact P">
 
 ## Hardware Setup
 
