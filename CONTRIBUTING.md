@@ -41,3 +41,9 @@ and detailed validation guidance.
 Include the Homebridge version, plugin version, Node.js version, Compact P/CTS700
 details, configuration with secrets removed, relevant logs, and clear reproduction
 steps. Use GitHub's private vulnerability reporting for security-sensitive issues.
+
+## Releases
+
+Release maintainers should follow [RELEASING.md](RELEASING.md). Publishing is
+performed by GitHub Actions through npm trusted publishing; do not add an npm
+access token to the repository.
