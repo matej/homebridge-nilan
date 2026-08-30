@@ -3,7 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const MAX_PACKAGE_SIZE = 5 * 1024 * 1024;
+const MAX_PACKAGE_SIZE = 512 * 1024;
 const REQUIRED_FILES = [
   'LICENSE',
   'README.md',
@@ -32,7 +32,9 @@ export function verifyPackageReport(report, packageJson) {
       `Packed identity ${packed.name}@${packed.version} does not match ${packageJson.name}@${packageJson.version}`,
     );
   }
-  if (typeof packed.filename !== 'string' || path.basename(packed.filename) !== packed.filename || !packed.filename.endsWith('.tgz')) {
+  if (typeof packed.filename !== 'string' ||
+    path.basename(packed.filename) !== packed.filename ||
+    !/^[A-Za-z0-9@._-]+\.tgz$/.test(packed.filename)) {
     throw new Error(`Unsafe or invalid package filename: ${packed.filename}`);
   }
   if (!Number.isFinite(packed.size) || packed.size <= 0 || packed.size > MAX_PACKAGE_SIZE) {

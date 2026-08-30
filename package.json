@@ -19,8 +19,7 @@
   "main": "dist/index.js",
   "files": [
     "config.schema.json",
-    "dist",
-    "resources"
+    "dist"
   ],
   "scripts": {
     "check": "npm run lint && npm run build && npm test",

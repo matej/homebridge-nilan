@@ -18,7 +18,7 @@ Configure `homebridge-nilan` on npm with this trusted publisher:
 | Allowed action | `npm publish` |
 
 This can be configured under the package's trusted-publisher settings on
-npmjs.com or with npm 11.5.1 or newer while authenticated with two-factor
+npmjs.com or with npm 11.15.0 or newer while authenticated with two-factor
 authentication:
 
 ```sh
@@ -35,15 +35,18 @@ revoke any obsolete npm automation tokens.
 
 ## Release process
 
-1. Update `version` in both `package.json` and `package-lock.json` in a pull
-   request, and document user-visible changes.
+1. Check `npm view homebridge-nilan version`, then update `version` in both
+   `package.json` and `package-lock.json` to a strictly newer version in a pull
+   request and document user-visible changes.
 2. Merge the pull request after all required checks pass.
 3. Create and publish a GitHub Release from `master` using the exact tag
    `v<package-version>`, for example `v2.0.0`.
 4. Monitor the **Release** workflow. It validates the tag and commit, runs the
    complete test suite, inspects the npm tarball, and publishes it with
    provenance.
-5. Confirm the new version on npm and install it in a test Homebridge instance.
+5. Confirm the new version on npm, review its distribution tags, and install it
+   in a test Homebridge instance. Remove obsolete distribution tags only after
+   the replacement release is verified.
 
 Stable GitHub Releases publish with the npm `latest` distribution tag. GitHub
 pre-releases publish with the `next` tag.

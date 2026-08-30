@@ -47,12 +47,17 @@ describe('verifyPackageReport', () => {
   });
 
   it('rejects an unexpectedly large package', () => {
-    expect(() => verifyPackageReport(createReport({ size: 5 * 1024 * 1024 + 1 }), packageJson))
+    expect(() => verifyPackageReport(createReport({ size: 512 * 1024 + 1 }), packageJson))
       .toThrow('must be between');
   });
 
   it('rejects an unsafe tarball filename', () => {
     expect(() => verifyPackageReport(createReport({ filename: '../package.tgz' }), packageJson))
+      .toThrow('Unsafe or invalid package filename');
+  });
+
+  it('rejects control characters and shell metacharacters in a tarball filename', () => {
+    expect(() => verifyPackageReport(createReport({ filename: 'package\n$(command).tgz' }), packageJson))
       .toThrow('Unsafe or invalid package filename');
   });
 });

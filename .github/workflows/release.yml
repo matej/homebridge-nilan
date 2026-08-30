@@ -41,7 +41,7 @@ jobs:
         run: |
           node -e "const packageJson = require('./package.json'); const expected = 'v' + packageJson.version; if (process.env.RELEASE_TAG !== expected) { throw new Error('Release tag ' + process.env.RELEASE_TAG + ' must match package version ' + expected); }"
           git merge-base --is-ancestor HEAD origin/master
-          node -e "const [major, minor] = process.argv[1].split('.').map(Number); if (major < 11 || (major === 11 && minor < 5)) { throw new Error('npm 11.5.1 or newer is required for trusted publishing'); }" "$(npm --version)"
+          node -e "const [major, minor, patch] = process.argv[1].split('.').map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) { throw new Error('npm 11.5.1 or newer is required for trusted publishing'); }" "$(npm --version)"
 
       - name: Install dependencies
         run: npm ci
