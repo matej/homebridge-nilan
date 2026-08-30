@@ -57,6 +57,7 @@ export class NilanHomebridgePlatform implements DynamicPlatformPlugin {
   discoverDevices() {
     const devices = this.config.devices;
     if (!Array.isArray(devices)) {
+      this.log.warn(`No devices configured; cached accessories will remain inactive (count: ${this.accessories.length}).`);
       return;
     }
 
