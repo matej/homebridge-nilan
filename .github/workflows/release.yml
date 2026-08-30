@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/homebridge-nilan
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Validate release metadata
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node -e "const packageJson = require('./package.json'); const expected = 'v' + packageJson.version; if (process.env.RELEASE_TAG !== expected) { throw new Error('Release tag ' + process.env.RELEASE_TAG + ' must match package version ' + expected); }"
+          git merge-base --is-ancestor HEAD origin/master
+          node -e "const [major, minor] = process.argv[1].split('.').map(Number); if (major < 11 || (major === 11 && minor < 5)) { throw new Error('npm 11.5.1 or newer is required for trusted publishing'); }" "$(npm --version)"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate project
+        run: npm run check
+
+      - name: Build and inspect package
+        id: pack
+        run: |
+          npm pack --json > npm-pack.json
+          echo "tarball=$(node scripts/verify-package.mjs npm-pack.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish stable release
+        if: ${{ !github.event.release.prerelease }}
+        run: npm publish "./${{ steps.pack.outputs.tarball }}" --access public --provenance --tag latest
+
+      - name: Publish prerelease
+        if: ${{ github.event.release.prerelease }}
+        run: npm publish "./${{ steps.pack.outputs.tarball }}" --access public --provenance --tag next
