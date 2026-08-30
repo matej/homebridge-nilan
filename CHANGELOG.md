@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Constrained the hot-water thermostat to Off and Heat and reject unsupported
+  Cool or Auto requests from HomeKit clients.
+
 ## 2.0.0-beta.1
 
 ### Upgrade notes

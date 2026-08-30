@@ -207,9 +207,15 @@ export class CompactPPlatformAccessory {
 
     const c = platform.Characteristic;
     dhwThermostatService.getCharacteristic(c.CurrentHeatingCoolingState).setProps({
+      minValue: c.CurrentHeatingCoolingState.OFF,
+      maxValue: c.CurrentHeatingCoolingState.HEAT,
+      minStep: 1,
       validValues: [c.CurrentHeatingCoolingState.OFF, c.CurrentHeatingCoolingState.HEAT],
     });
     dhwThermostatService.getCharacteristic(c.TargetHeatingCoolingState).setProps({
+      minValue: c.TargetHeatingCoolingState.OFF,
+      maxValue: c.TargetHeatingCoolingState.HEAT,
+      minStep: 1,
       validValues: [c.TargetHeatingCoolingState.OFF, c.TargetHeatingCoolingState.HEAT],
     });
     dhwThermostatService.updateCharacteristic(c.TemperatureDisplayUnits, c.TemperatureDisplayUnits.CELSIUS);
@@ -232,6 +238,10 @@ export class CompactPPlatformAccessory {
 
     dhwThermostatService.getCharacteristic(c.TargetHeatingCoolingState)
       .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        if (value !== c.TargetHeatingCoolingState.OFF && value !== c.TargetHeatingCoolingState.HEAT) {
+          callback(new Error('Hot water supports only Off and Heat modes.'));
+          return;
+        }
         const paused = value === c.TargetHeatingCoolingState.OFF;
         this.handleWrite(next => this.cts700Modbus.writeDHWPaused(next), paused, 'DHW pause', callback);
       });

@@ -196,13 +196,35 @@ describe('CompactPPlatformAccessory', () => {
     expect(modbus.writeVentilationMode).toHaveBeenCalledWith(VentilationMode.Heating);
   });
 
-  it('uses the controller-supported DHW temperature range', () => {
+  it('uses the controller-supported DHW temperature and mode ranges', () => {
     const { Characteristic, services } = createHarness();
 
     expect(services.get('compact-p-dhw')!.getCharacteristic(Characteristic.TargetTemperature).props).toMatchObject({
       minValue: 10,
       maxValue: 65,
     });
+    expect(services.get('compact-p-dhw')!.getCharacteristic(Characteristic.CurrentHeatingCoolingState).props).toMatchObject({
+      minValue: Characteristic.CurrentHeatingCoolingState.OFF,
+      maxValue: Characteristic.CurrentHeatingCoolingState.HEAT,
+      minStep: 1,
+      validValues: [Characteristic.CurrentHeatingCoolingState.OFF, Characteristic.CurrentHeatingCoolingState.HEAT],
+    });
+    expect(services.get('compact-p-dhw')!.getCharacteristic(Characteristic.TargetHeatingCoolingState).props).toMatchObject({
+      minValue: Characteristic.TargetHeatingCoolingState.OFF,
+      maxValue: Characteristic.TargetHeatingCoolingState.HEAT,
+      minStep: 1,
+      validValues: [Characteristic.TargetHeatingCoolingState.OFF, Characteristic.TargetHeatingCoolingState.HEAT],
+    });
+  });
+
+  it('rejects unsupported DHW cooling and automatic modes', async () => {
+    const { Characteristic, modbus, services } = createHarness();
+    const dhw = services.get('compact-p-dhw')!;
+
+    await invokeSetFailure(dhw, Characteristic.TargetHeatingCoolingState, Characteristic.TargetHeatingCoolingState.COOL);
+    await invokeSetFailure(dhw, Characteristic.TargetHeatingCoolingState, Characteristic.TargetHeatingCoolingState.AUTO);
+
+    expect(modbus.writeDHWPaused).not.toHaveBeenCalled();
   });
 
   it('supports the full effective fan-output range', () => {
