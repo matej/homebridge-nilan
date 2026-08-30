@@ -35,6 +35,7 @@ export class CompactPPlatformAccessory {
   private resolverRestoreAttempted = false;
   private lastControllerDateTime?: DateTime;
   private lastResolverCheckpoint = 0;
+  private invalidFilterReadingsLogged = false;
 
   constructor(
     private readonly platform: NilanHomebridgePlatform,
@@ -304,18 +305,27 @@ export class CompactPPlatformAccessory {
       this.panelTemperatureSensorService.updateCharacteristic(c.CurrentTemperature, readings.panelTemperature);
       this.ventilationThermostatService.updateCharacteristic(c.CurrentRelativeHumidity, readings.actualHumidity);
       this.dhwThermostatService.updateCharacteristic(c.CurrentTemperature, readings.dhwTankTopTemperature);
-      this.updateFilterMaintenance(
+      const inletFilterUpdated = this.updateFilterMaintenance(
         this.inletFilterMaintenanceService,
         readings.inletFilterElapsedDays,
         readings.inletFilterReplacementInterval,
         c,
       );
-      this.updateFilterMaintenance(
+      const outletFilterUpdated = this.updateFilterMaintenance(
         this.outletFilterMaintenanceService,
         readings.outletFilterElapsedDays,
         readings.outletFilterReplacementInterval,
         c,
       );
+      if (!inletFilterUpdated || !outletFilterUpdated) {
+        if (!this.invalidFilterReadingsLogged) {
+          this.platform.log.warn('Filter counters are outside the supported time-based range; leaving filter state unchanged.');
+          this.invalidFilterReadingsLogged = true;
+        }
+      } else if (this.invalidFilterReadingsLogged) {
+        this.platform.log.info('Filter counters returned to the supported time-based range.');
+        this.invalidFilterReadingsLogged = false;
+      }
 
       const settings = await this.cts700Modbus.fetchSettings();
       this.platform.log.debug('Updating with settings:', settings);
@@ -412,10 +422,13 @@ export class CompactPPlatformAccessory {
 
   private updateFilterMaintenance(
     service: Service,
-    elapsedDays: number,
-    replacementInterval: number,
+    elapsedDays: number | null,
+    replacementInterval: number | null,
     c: NilanHomebridgePlatform['Characteristic'],
-  ): void {
+  ): boolean {
+    if (elapsedDays === null || replacementInterval === null) {
+      return false;
+    }
     const remainingDays = Math.max(0, replacementInterval - elapsedDays);
     const filterLifeLevel = Math.round(remainingDays / replacementInterval * 100);
     const changeIndication = elapsedDays >= replacementInterval
@@ -423,6 +436,7 @@ export class CompactPPlatformAccessory {
       : c.FilterChangeIndication.FILTER_OK;
     service.updateCharacteristic(c.FilterLifeLevel, filterLifeLevel);
     service.updateCharacteristic(c.FilterChangeIndication, changeIndication);
+    return true;
   }
 
   private async handleWrite<T extends WriterParameter, R extends WriterParameter>(

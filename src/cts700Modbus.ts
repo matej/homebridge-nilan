@@ -183,21 +183,21 @@ export class CTS700Modbus {
       });
   }
 
-  private async readFilterReplacementInterval(register: Register): Promise<number> {
+  private async readFilterReplacementInterval(register: Register): Promise<number | null> {
     return this.readSingleRegister(register)
       .then((result) => {
         if (result < 30 || result > 360) {
-          throw Error('Filter replacement interval outside of acceptable range.');
+          return null;
         }
         return result;
       });
   }
 
-  private async readFilterElapsedDays(register: Register): Promise<number> {
+  private async readFilterElapsedDays(register: Register): Promise<number | null> {
     return this.readSingleRegister(register)
       .then((result) => {
         if (result > 360) {
-          throw Error('Filter elapsed time outside of acceptable range.');
+          return null;
         }
         return result;
       });

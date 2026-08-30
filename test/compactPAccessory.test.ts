@@ -99,6 +99,8 @@ function createHarness(schedule = false, readingOverrides: Partial<Readings> = {
     log: {
       debug: vi.fn(),
       error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
     },
   };
   const modbus = {
@@ -430,6 +432,21 @@ describe('CompactPPlatformAccessory', () => {
       Characteristic.FilterChangeIndication,
       Characteristic.FilterChangeIndication.CHANGE_FILTER,
     ]);
+  });
+
+  it('continues updating other characteristics when filter counters are unavailable', async () => {
+    const { Characteristic, platform, services } = createHarness(false, {
+      inletFilterReplacementInterval: null,
+      outletFilterElapsedDays: null,
+      roomTemperature: 23,
+    });
+
+    await vi.advanceTimersByTimeAsync(20000);
+
+    expect(services.get('compact-p-temperature')!.updates).toContainEqual([Characteristic.CurrentTemperature, 23]);
+    expect(services.get('compact-p-inlet-filter')!.updates)
+      .not.toContainEqual(expect.arrayContaining([Characteristic.FilterLifeLevel]));
+    expect(platform.log.warn).toHaveBeenCalledOnce();
   });
 
   it('does not overlap slow polling cycles', async () => {
