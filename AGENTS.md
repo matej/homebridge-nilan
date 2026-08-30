@@ -66,9 +66,16 @@ to real hardware.
   degrees Celsius by the read helpers.
 - The pause register controls both ventilation and hot-water state. Review both
   HomeKit services when changing pause or operating-mode behavior.
-- Week-schedule support may write room temperature, hot-water temperature, and
-  fan speed back to the unit. Do not exercise live writes without explicit user
-  authorization and a known test device.
+- Week-schedule support reads controller state and must never write schedule
+  values into user registers. Only explicit HomeKit actions may write room
+  temperature, hot-water temperature, or fan speed to the unit. Do not exercise
+  live writes without explicit user authorization and a known test device.
+- System working mode `AUTO` does not distinguish active schedule control from a
+  temporary user override. User registers can change through HomeKit, the CTS700
+  UI, or another Modbus client. Treat inlet fan output as an inference signal,
+  not a target, because automatic controller functions may alter it.
+- `npm run diagnose:cts700` is a read-only hardware observation tool. Keep real
+  controller addresses and captured output out of commits.
 - `npm run audit:cts700` is a read-only settings inventory. It deliberately
   skips authentication, network identity, passwords, write-only registers, and
   reset registers. Keep its JSON output out of commits.

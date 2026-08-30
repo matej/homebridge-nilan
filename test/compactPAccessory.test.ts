@@ -1,7 +1,7 @@
 import type { CharacteristicSetCallback, CharacteristicValue, PlatformAccessory } from 'homebridge';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OperationMode, PauseOption, type Readings, VentilationMode } from '../src/cts700Data';
+import { OperationMode, PauseOption, type Readings, SystemWorkingMode, VentilationMode } from '../src/cts700Data';
 import type { CTS700Modbus } from '../src/cts700Modbus';
 
 vi.mock('homebridge', () => ({
@@ -104,6 +104,7 @@ function createHarness(schedule = false, readingOverrides: Partial<Readings> = {
     fetchMetadata: vi.fn().mockResolvedValue({ macAddress: '00:11:22:33:44:55', softwareVersion: '1.2.3' }),
     fetchReadings: vi.fn().mockResolvedValue({
       actualHumidity: 48,
+      inletFanControl: 60,
       inletFilterReplacementInterval: 90,
       inletFilterElapsedDays: 59,
       outletFilterReplacementInterval: 90,
@@ -121,6 +122,7 @@ function createHarness(schedule = false, readingOverrides: Partial<Readings> = {
       operationMode: OperationMode.Heating,
       paused: PauseOption.Disabled,
       roomTemperatureSetPoint: 22,
+      systemWorkingMode: SystemWorkingMode.Manual,
       ventilationMode: VentilationMode.Auto,
     }),
     writeDHWPaused: vi.fn().mockResolvedValue(PauseOption.Disabled),
@@ -214,6 +216,78 @@ describe('CompactPPlatformAccessory', () => {
     ]);
   });
 
+  it('reads automatic targets from the week schedule without writing them to user registers', async () => {
+    const { Characteristic, modbus, services } = createHarness(true, { inletFanControl: 40 });
+    modbus.fetchSettings.mockResolvedValue({
+      dhwTemperatureSetPoint: 50,
+      fanSpeed: 60,
+      operationMode: OperationMode.Heating,
+      paused: PauseOption.Disabled,
+      roomTemperatureSetPoint: 22,
+      systemWorkingMode: SystemWorkingMode.Auto,
+      ventilationMode: VentilationMode.Auto,
+    });
+    modbus.fetchActiveWeekProgramForDateTime.mockResolvedValue({
+      dhwTemperature: 48,
+      fanSpeed: 40,
+      flags: 0,
+      hour: 3,
+      minute: 0,
+      temperature: 20,
+      weekDay: 5,
+    });
+
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(modbus.fetchActiveWeekProgramForDateTime).toHaveBeenCalledOnce();
+    expect(services.get('compact-p-fan')!.updates).toContainEqual([Characteristic.RotationSpeed, 40]);
+    expect(services.get('compact-p-temperature')!.updates).toContainEqual([Characteristic.TargetTemperature, 20]);
+    expect(services.get('compact-p-dhw')!.updates).toContainEqual([Characteristic.TargetTemperature, 48]);
+    expect(modbus.writeFanSpeed).not.toHaveBeenCalled();
+    expect(modbus.writeRoomTemperatureSetPoint).not.toHaveBeenCalled();
+    expect(modbus.writeDHWSetPoint).not.toHaveBeenCalled();
+  });
+
+  it('uses user targets and skips the schedule outside automatic working mode', async () => {
+    const { Characteristic, modbus, services } = createHarness(true);
+
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(modbus.fetchActiveWeekProgramForDateTime).not.toHaveBeenCalled();
+    expect(services.get('compact-p-fan')!.updates).toContainEqual([Characteristic.RotationSpeed, 60]);
+    expect(services.get('compact-p-temperature')!.updates).toContainEqual([Characteristic.TargetTemperature, 22]);
+    expect(services.get('compact-p-dhw')!.updates).toContainEqual([Characteristic.TargetTemperature, 50]);
+  });
+
+  it('keeps an explicit HomeKit fan override while the active schedule record is unchanged', async () => {
+    const { Characteristic, modbus, services } = createHarness(true, { inletFanControl: 40 });
+    modbus.fetchSettings.mockResolvedValue({
+      dhwTemperatureSetPoint: 50,
+      fanSpeed: 60,
+      operationMode: OperationMode.Heating,
+      paused: PauseOption.Disabled,
+      roomTemperatureSetPoint: 22,
+      systemWorkingMode: SystemWorkingMode.Auto,
+      ventilationMode: VentilationMode.Auto,
+    });
+    modbus.fetchActiveWeekProgramForDateTime.mockResolvedValue({
+      dhwTemperature: 48,
+      fanSpeed: 40,
+      flags: 0,
+      hour: 3,
+      minute: 0,
+      temperature: 20,
+      weekDay: 5,
+    });
+
+    await vi.advanceTimersByTimeAsync(10000);
+    await invokeSet(services.get('compact-p-fan')!, Characteristic.RotationSpeed, 60);
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(modbus.writeFanSpeed).toHaveBeenCalledWith(60);
+    expect(services.get('compact-p-fan')!.updates.at(-1)).toEqual([Characteristic.RotationSpeed, 60]);
+  });
+
   it('resets inlet and outlet filter counters from HomeKit', async () => {
     const { Characteristic, modbus, services } = createHarness();
 
@@ -258,6 +332,7 @@ describe('CompactPPlatformAccessory', () => {
 
     resolveReadings!({
       actualHumidity: 48,
+      inletFanControl: 60,
       inletFilterReplacementInterval: 90,
       inletFilterElapsedDays: 59,
       outletFilterReplacementInterval: 90,

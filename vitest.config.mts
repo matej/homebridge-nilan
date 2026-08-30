@@ -5,7 +5,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      include: ['src/compactPAccessory.ts', 'src/cts700Data.ts', 'src/cts700Modbus.ts', 'src/platform.ts'],
+      include: [
+        'src/compactPAccessory.ts',
+        'src/cts700Data.ts',
+        'src/cts700Modbus.ts',
+        'src/cts700TargetResolver.ts',
+        'src/platform.ts',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,

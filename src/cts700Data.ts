@@ -1,4 +1,7 @@
 export enum Register {
+	// Current system working mode (read-only).
+	// 0 Idle, 1 Auto, 2 Extended operate, 3 Manual, 4 LON, 5 Service.
+	SystemWorkingMode = 1047,
 	// Pause is ID of register holding the pause flag
 	// 0 (Disabled)
 	// 1 (Pause ventilation)
@@ -19,6 +22,8 @@ export enum Register {
 	OutdoorTemperature = 5152,
 	// ActualHumidity is ID of register holding actual humidity value
 	ActualHumidity = 4716,
+	// Current inlet-fan control output (0-100%). This is an observed output, not a target.
+	InletFanControl = 4699,
 	// Software filter replacement intervals and elapsed times are measured in days.
 	InletFilterReplacementInterval = 1326,
 	OutletFilterReplacementInterval = 1327,
@@ -106,6 +111,15 @@ export enum OperationMode {
 	DHW
   }
 
+export enum SystemWorkingMode {
+	Idle = 0,
+	Auto,
+	ExtendedOperate,
+	Manual,
+	LON,
+	Service,
+  }
+
 // Device metadata for the Nilan system
 export interface Metadata {
     // The Serial number of control board.
@@ -117,6 +131,8 @@ export interface Metadata {
 
 // Settings of Nilan system
 export interface Settings {
+	// Coarse controller working state. Auto does not distinguish schedule control from a temporary user override.
+	systemWorkingMode: SystemWorkingMode;
     // Paused tells if operation is currently paused
 	paused: PauseOption;
 	// Fan speed of ventilation (20-100)
@@ -141,6 +157,8 @@ export interface Readings {
 	panelTemperature: number;
 	// Actual humidity of air (0-100%)
 	actualHumidity: number;
+	// Current inlet-fan control output (0-100%).
+	inletFanControl: number;
 	// Software filter replacement intervals and elapsed times in days.
 	inletFilterReplacementInterval: number;
 	inletFilterElapsedDays: number;

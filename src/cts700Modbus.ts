@@ -8,6 +8,7 @@ import {
   Readings, 
   Register, 
   Settings, 
+  SystemWorkingMode,
   VentilationMode, 
   WeekScheduleRecord,
 } from './cts700Data';
@@ -125,6 +126,7 @@ export class CTS700Modbus {
       outdoorTemperature: await this.readTemperatureRegister(Register.OutdoorTemperature),
       panelTemperature: await this.readTemperatureRegister(Register.PanelTemperature),
       actualHumidity: await this.readPercentageRegister(Register.ActualHumidity),
+      inletFanControl: await this.readPercentageRegister(Register.InletFanControl),
       inletFilterReplacementInterval: await this.readFilterReplacementInterval(Register.InletFilterReplacementInterval),
       inletFilterElapsedDays: await this.readFilterElapsedDays(Register.InletFilterElapsedDays),
       outletFilterReplacementInterval: await this.readFilterReplacementInterval(Register.OutletFilterReplacementInterval),
@@ -138,6 +140,7 @@ export class CTS700Modbus {
 
   async fetchSettings(): Promise<Settings> {
     const settings: Settings = {
+      systemWorkingMode: await this.readSystemWorkingModeRegister(Register.SystemWorkingMode),
       paused: await this.readPauseRegister(Register.Pause),
       fanSpeed: await this.readPercentageRegister(Register.FanSpeed),
       roomTemperatureSetPoint: await this.readTemperatureRegister(Register.RoomTemperatureSetPoint),
@@ -225,6 +228,16 @@ export class CTS700Modbus {
       .then((result) => {
         if (result < OperationMode.Undefined || result > OperationMode.DHW) {
           throw Error('Invalid operation mode value.');
+        }
+        return result;
+      });
+  }
+
+  private async readSystemWorkingModeRegister(register: Register): Promise<SystemWorkingMode> {
+    return this.readSingleRegister(register)
+      .then((result) => {
+        if (result < SystemWorkingMode.Idle || result > SystemWorkingMode.Service) {
+          throw Error('Invalid system working mode value.');
         }
         return result;
       });

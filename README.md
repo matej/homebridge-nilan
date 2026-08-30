@@ -121,7 +121,7 @@ For manual configuration, add an entry to the `platforms` array in Homebridge's
 | `devices` | Yes | One or more Compact P controller definitions. |
 | `devices[].name` | Yes | Display name for the HomeKit accessory. |
 | `devices[].host` | Yes | IPv4 address of the controller. |
-| `devices[].schedule` | No | Synchronize setpoints and fan speed with the CTS 700 week program; defaults to `true`. |
+| `devices[].schedule` | No | Read automatic setpoints and fan speed from the CTS 700 week program; defaults to `true`. |
 
 Give each configured device a unique IP address. If you change a device's
 `host`, Homebridge treats it as a new accessory because the IP address is part
@@ -130,10 +130,14 @@ of its persistent identity.
 ### Schedule
 
 Enable `schedule` when a week program is active on the controller. The plugin
-then keeps HomeKit's room-temperature target, hot-water target, and fan speed in
-sync with the active schedule entry. This synchronization can write those three
-values back to the controller. Set the option to `false` if no week program is
-configured or if HomeKit should retain the last manually selected values.
+reads the active entry and never writes its values back to the user registers.
+The CTS 700 keeps scheduled and user targets separately: a change from HomeKit,
+the control-unit UI, or another Modbus client temporarily overrides the active
+schedule without leaving automatic working mode, and the next schedule entry
+resumes control. The plugin tracks those changes independently for fan, room,
+and hot-water targets. It uses the inlet fan output as a limited fan-only hint
+after startup or when the UI reapplies an unchanged value. Set the option to
+`false` if no week program is configured.
 
 ## Troubleshooting
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OperationMode, PauseOption, Register, VentilationMode } from '../src/cts700Data';
+import { OperationMode, PauseOption, Register, SystemWorkingMode, VentilationMode } from '../src/cts700Data';
 import { CTS700Modbus } from '../src/cts700Modbus';
 
 const { MockModbusRTU, client } = vi.hoisted(() => {
@@ -136,6 +136,7 @@ describe('CTS700Modbus reads', () => {
         [Register.OutdoorTemperature, 0xffc9],
         [Register.PanelTemperature, 203],
         [Register.ActualHumidity, 48],
+        [Register.InletFanControl, 55],
         [Register.InletFilterReplacementInterval, 90],
         [Register.InletFilterElapsedDays, 59],
         [Register.OutletFilterReplacementInterval, 90],
@@ -153,6 +154,7 @@ describe('CTS700Modbus reads', () => {
       outdoorTemperature: -5.5,
       panelTemperature: 20.3,
       actualHumidity: 48,
+      inletFanControl: 55,
       inletFilterReplacementInterval: 90,
       inletFilterElapsedDays: 59,
       outletFilterReplacementInterval: 90,
@@ -173,6 +175,7 @@ describe('CTS700Modbus reads', () => {
   it('validates and decodes settings', async () => {
     const modbus = await createModbus();
     const values = new Map<number, number>([
+      [Register.SystemWorkingMode, SystemWorkingMode.Manual],
       [Register.Pause, PauseOption.DHW],
       [Register.FanSpeed, 60],
       [Register.RoomTemperatureSetPoint, 225],
@@ -183,6 +186,7 @@ describe('CTS700Modbus reads', () => {
     client.readHoldingRegisters.mockImplementation(async (address: number) => registerResult([values.get(address)!]));
 
     await expect(modbus.fetchSettings()).resolves.toEqual({
+      systemWorkingMode: SystemWorkingMode.Manual,
       paused: PauseOption.DHW,
       fanSpeed: 60,
       roomTemperatureSetPoint: 22.5,
