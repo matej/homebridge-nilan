@@ -158,6 +158,12 @@ async function invokeSet(service: FakeService, characteristic: unknown, value: C
   await vi.waitFor(() => expect(callback).toHaveBeenCalledWith(null));
 }
 
+async function invokeSetFailure(service: FakeService, characteristic: unknown, value: CharacteristicValue) {
+  const callback = vi.fn();
+  service.getCharacteristic(characteristic).setHandler!(value, callback);
+  await vi.waitFor(() => expect(callback).toHaveBeenCalledWith(expect.any(Error)));
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -272,6 +278,58 @@ describe('CompactPPlatformAccessory', () => {
     expect(services.get('compact-p-fan')!.updates).toContainEqual([Characteristic.RotationSpeed, 60]);
     expect(services.get('compact-p-temperature')!.updates).toContainEqual([Characteristic.TargetTemperature, 22]);
     expect(services.get('compact-p-dhw')!.updates).toContainEqual([Characteristic.TargetTemperature, 50]);
+  });
+
+  it('maps forced cooling writes and controller state to HomeKit', async () => {
+    const { Characteristic, modbus, services } = createHarness();
+    modbus.fetchSettings.mockResolvedValue({
+      ...await modbus.fetchSettings(),
+      operationMode: OperationMode.Cooling,
+      ventilationMode: VentilationMode.Cooling,
+    });
+    modbus.fetchSettings.mockClear();
+
+    await invokeSet(
+      services.get('compact-p-temperature')!,
+      Characteristic.TargetHeatingCoolingState,
+      Characteristic.TargetHeatingCoolingState.COOL,
+    );
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(modbus.writeVentilationMode).toHaveBeenCalledWith(VentilationMode.Cooling);
+    expect(services.get('compact-p-temperature')!.updates).toContainEqual([
+      Characteristic.TargetHeatingCoolingState,
+      Characteristic.TargetHeatingCoolingState.COOL,
+    ]);
+    expect(services.get('compact-p-temperature')!.updates).toContainEqual([
+      Characteristic.CurrentHeatingCoolingState,
+      Characteristic.CurrentHeatingCoolingState.COOL,
+    ]);
+  });
+
+  it('does not record a temperature override when the controller write fails', async () => {
+    const { Characteristic, modbus, services } = createHarness(true);
+    modbus.fetchSettings.mockResolvedValue({
+      ...await modbus.fetchSettings(),
+      systemWorkingMode: SystemWorkingMode.Auto,
+    });
+    modbus.fetchSettings.mockClear();
+    modbus.fetchActiveWeekProgramForDateTime.mockResolvedValue({
+      dhwTemperature: 48,
+      fanSpeed: 40,
+      flags: 0,
+      hour: 3,
+      minute: 0,
+      temperature: 20,
+      weekDay: 5,
+    });
+    modbus.writeRoomTemperatureSetPoint.mockRejectedValueOnce(new Error('write failed'));
+
+    await vi.advanceTimersByTimeAsync(10000);
+    await invokeSetFailure(services.get('compact-p-temperature')!, Characteristic.TargetTemperature, 23);
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(services.get('compact-p-temperature')!.updates.at(-1)).toEqual([Characteristic.TargetTemperature, 20]);
   });
 
   it('reports effective fan output after a write without retrying the user target', async () => {
@@ -476,6 +534,19 @@ describe('CompactPPlatformAccessory', () => {
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(10000);
     expect(modbus.fetchReadings).toHaveBeenCalledTimes(2);
+  });
+
+  it('recovers on the next cycle after a polling failure', async () => {
+    const { Characteristic, modbus, platform, services } = createHarness();
+    modbus.fetchReadings.mockRejectedValueOnce(new Error('temporary read failure'));
+
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(platform.log.error).toHaveBeenCalledWith('Could not update readings and settings.', 'temporary read failure');
+
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(modbus.fetchReadings).toHaveBeenCalledTimes(2);
+    expect(services.get('compact-p-temperature')!.updates).toContainEqual([Characteristic.CurrentTemperature, 21]);
   });
 
   it('cleans up polling and Modbus state on shutdown', async () => {

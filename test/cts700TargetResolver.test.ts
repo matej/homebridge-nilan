@@ -137,6 +137,47 @@ describe('CTS700TargetResolver', () => {
     )).toBe(false);
   });
 
+  it('rejects snapshots when controller time moves backwards or is not a real calendar date', () => {
+    const original = new CTS700TargetResolver();
+    original.resolveAutomaticTargets(userTargets, sundayNight);
+    original.markUserOverride('roomTemperature', 23);
+    const snapshot = original.createSnapshot(controllerTime);
+
+    expect(new CTS700TargetResolver().restoreSnapshot(
+      snapshot,
+      { ...controllerTime, minute: 4 },
+      sundayNight,
+      userTargets,
+    )).toBe(false);
+    expect(new CTS700TargetResolver().restoreSnapshot(
+      snapshot,
+      { ...controllerTime, day: 30, month: 2 },
+      sundayNight,
+      userTargets,
+    )).toBe(false);
+  });
+
+  it('restores a recent override across midnight when the active schedule record is unchanged', () => {
+    const beforeMidnight = { ...controllerTime, minute: 55 };
+    const afterMidnight: DateTime = {
+      ...controllerTime,
+      minute: 5,
+      hour: 0,
+      day: 17,
+      weekDay: 1,
+    };
+    const original = new CTS700TargetResolver();
+    original.resolveAutomaticTargets(userTargets, sundayNight);
+    original.markUserOverride('roomTemperature', 23);
+
+    expect(new CTS700TargetResolver().restoreSnapshot(
+      original.createSnapshot(beforeMidnight),
+      afterMidnight,
+      sundayNight,
+      userTargets,
+    )).toBe(true);
+  });
+
   it('does not create persisted state without an active override', () => {
     const resolver = new CTS700TargetResolver();
     resolver.resolveAutomaticTargets(userTargets, sundayNight);

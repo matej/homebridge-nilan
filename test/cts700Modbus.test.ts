@@ -110,6 +110,17 @@ describe('CTS700Modbus connection', () => {
     expect(client.connectTCP).toHaveBeenCalledOnce();
     vi.useRealTimers();
   });
+
+  it('reports connection failures before scheduling a retry', async () => {
+    const error = Object.assign(new Error('connection refused'), { code: 'ECONNREFUSED' });
+    const connectionFailed = vi.fn();
+    client.connectTCP.mockRejectedValueOnce(error);
+
+    const modbus = new CTS700Modbus('192.0.2.1', vi.fn(), connectionFailed);
+    await vi.waitFor(() => expect(connectionFailed).toHaveBeenCalledWith(error));
+
+    modbus.close();
+  });
 });
 
 describe('CTS700Modbus reads', () => {
