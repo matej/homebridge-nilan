@@ -427,4 +427,39 @@ describe('CTS700Modbus writes', () => {
     await expect(modbus.writeDHWPaused(false)).resolves.toBe(PauseOption.Ventilation);
     expect(client.writeRegister).toHaveBeenLastCalledWith(Register.Pause, PauseOption.Ventilation);
   });
+
+  it('serializes concurrent changes to the shared pause register', async () => {
+    const modbus = await createModbus();
+    let pause = PauseOption.Disabled;
+    client.readHoldingRegisters.mockImplementation(async () => registerResult([pause]));
+    client.writeRegister.mockImplementation(async (address: number, value: PauseOption) => {
+      pause = value;
+      return { address, value };
+    });
+
+    await Promise.all([
+      modbus.writeVentilationPaused(true),
+      modbus.writeDHWPaused(true),
+    ]);
+
+    expect(pause).toBe(PauseOption.All);
+    expect(client.writeRegister.mock.calls).toEqual([
+      [Register.Pause, PauseOption.Ventilation],
+      [Register.Pause, PauseOption.All],
+    ]);
+  });
+
+  it('continues the pause queue after a failed mutation', async () => {
+    const modbus = await createModbus();
+    client.readHoldingRegisters.mockResolvedValue(registerResult([PauseOption.Disabled]));
+    client.writeRegister
+      .mockRejectedValueOnce(new Error('write failed'))
+      .mockResolvedValueOnce({ address: Register.Pause, value: PauseOption.DHW });
+
+    const first = modbus.writeVentilationPaused(true);
+    const second = modbus.writeDHWPaused(true);
+
+    await expect(first).rejects.toThrow('write failed');
+    await expect(second).resolves.toBe(PauseOption.DHW);
+  });
 });

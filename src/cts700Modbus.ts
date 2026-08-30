@@ -18,6 +18,7 @@ export class CTS700Modbus {
   private client: ModbusRTU | null = null;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private disposed = false;
+  private pauseWriteQueue: Promise<void> = Promise.resolve();
 
   private networkErrors = [
     'ESOCKETTIMEDOUT',
@@ -405,10 +406,14 @@ export class CTS700Modbus {
     return this.writeSingleRegister(register, modbusValue);
   }
 
-  private async writePauseComponent(component: PauseOption, paused: boolean): Promise<PauseOption> {
-    const current = await this.readPauseRegister(Register.Pause);
-    const updated = paused ? current | component : current & ~component;
-    return this.writePauseOption(updated as PauseOption);
+  private writePauseComponent(component: PauseOption, paused: boolean): Promise<PauseOption> {
+    const operation = this.pauseWriteQueue.then(async () => {
+      const current = await this.readPauseRegister(Register.Pause);
+      const updated = paused ? current | component : current & ~component;
+      return this.writePauseOption(updated as PauseOption);
+    });
+    this.pauseWriteQueue = operation.then(() => undefined, () => undefined);
+    return operation;
   }
 
   private async writeSingleRegister(register: Register, value: number): Promise<number> {
