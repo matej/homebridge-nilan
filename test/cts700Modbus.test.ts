@@ -172,6 +172,37 @@ describe('CTS700Modbus reads', () => {
     });
   });
 
+  it('keeps non-filter readings available when time-based filter counters are invalid', async () => {
+    const modbus = await createModbus();
+    client.readHoldingRegisters.mockImplementation(async (address: number) => {
+      const values = new Map<number, number>([
+        [Register.MasterSensorTemperature, 215],
+        [Register.OutdoorTemperature, 100],
+        [Register.PanelTemperature, 203],
+        [Register.ActualHumidity, 48],
+        [Register.InletFanControl, 55],
+        [Register.InletFilterReplacementInterval, 0],
+        [Register.InletFilterElapsedDays, 59],
+        [Register.OutletFilterReplacementInterval, 90],
+        [Register.OutletFilterElapsedDays, 400],
+        [Register.DHWTopTankTemperature, 521],
+      ]);
+      if (address === Register.CurrentTime) {
+        return registerResult([0x1e2d, 0x0e10, 0x0708, 0x1a00]);
+      }
+      return registerResult([values.get(address)!]);
+    });
+
+    await expect(modbus.fetchReadings()).resolves.toMatchObject({
+      roomTemperature: 21.5,
+      actualHumidity: 48,
+      inletFilterReplacementInterval: null,
+      inletFilterElapsedDays: 59,
+      outletFilterReplacementInterval: 90,
+      outletFilterElapsedDays: null,
+    });
+  });
+
   it('validates and decodes settings', async () => {
     const modbus = await createModbus();
     const values = new Map<number, number>([

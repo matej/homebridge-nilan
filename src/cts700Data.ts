@@ -160,10 +160,10 @@ export interface Readings {
 	// Current inlet-fan control output (0-100%).
 	inletFanControl: number;
 	// Software filter replacement intervals and elapsed times in days.
-	inletFilterReplacementInterval: number;
-	inletFilterElapsedDays: number;
-	outletFilterReplacementInterval: number;
-	outletFilterElapsedDays: number;
+	inletFilterReplacementInterval: number | null;
+	inletFilterElapsedDays: number | null;
+	outletFilterReplacementInterval: number | null;
+	outletFilterElapsedDays: number | null;
 	// DHW tank top temperature in C times 10
 	dhwTankTopTemperature: number;
 	// Current device time.
