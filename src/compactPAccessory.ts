@@ -12,7 +12,7 @@ import {
 import type { NilanHomebridgePlatform } from './platform';
 
 type WriterParameter = boolean | number | PauseOption | VentilationMode;
-type ModbusFactory = (host: string, didConnect: () => void) => CTS700Modbus;
+type ModbusFactory = (host: string, didConnect: () => void, connectionFailed: (error: unknown) => void) => CTS700Modbus;
 const RESOLVER_CHECKPOINT_INTERVAL_MS = 5 * 60 * 1000;
 const RESOLVER_CONTEXT_KEY = 'targetResolverState';
 
@@ -40,12 +40,18 @@ export class CompactPPlatformAccessory {
   constructor(
     private readonly platform: NilanHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
-    modbusFactory: ModbusFactory = (host, didConnect) => new CTS700Modbus(host, didConnect),
+    modbusFactory: ModbusFactory = (host, didConnect, connectionFailed) => new CTS700Modbus(host, didConnect, connectionFailed),
   ) {
 
-    this.cts700Modbus = modbusFactory(this.accessory.context.device.host, () => {
-      this.setUpAfterConnection();
-    }); 
+    this.cts700Modbus = modbusFactory(
+      this.accessory.context.device.host,
+      () => {
+        this.setUpAfterConnection();
+      },
+      (error) => {
+        this.platform.log.warn('Could not connect to the CTS700 controller.', error instanceof Error ? error.message : String(error));
+      },
+    );
 
     // Accessory information
     this.accessory.getService(platform.Service.AccessoryInformation)!

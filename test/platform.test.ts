@@ -26,7 +26,7 @@ class FakePlatformAccessory {
   ) {}
 }
 
-function createHarness(devices: unknown[]) {
+function createHarness(devices?: unknown[]) {
   const listeners = new Map<string, () => void>();
   const api = {
     hap: {
@@ -129,5 +129,18 @@ describe('NilanHomebridgePlatform discovery', () => {
 
     expect(handlers).toHaveLength(2);
     expect(handlers.every(handler => handler.shutdown.mock.calls.length === 1)).toBe(true);
+  });
+
+  it('warns when cached accessories cannot be activated without a device list', () => {
+    const { api, log, platform } = createHarness();
+    const cached = new FakePlatformAccessory('Cached', 'uuid:192.0.2.10');
+    cached.context.device = { host: '192.0.2.10' };
+    platform.configureAccessory(cached as unknown as PlatformAccessory);
+
+    platform.discoverDevices();
+
+    expect(log.warn).toHaveBeenCalledWith('No devices configured; cached accessories will remain inactive (count: 1).');
+    expect(api.unregisterPlatformAccessories).not.toHaveBeenCalled();
+    expect(MockAccessoryHandler).not.toHaveBeenCalled();
   });
 });

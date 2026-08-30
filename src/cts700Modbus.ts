@@ -40,6 +40,7 @@ export class CTS700Modbus {
   constructor(
       private readonly host: string,
       private readonly didConnect: () => void,
+      private readonly connectionFailed: (error: unknown) => void = () => undefined,
   ) {
     this.connect();
   }
@@ -63,6 +64,7 @@ export class CTS700Modbus {
         this.didConnect();    
       })
       .catch((e) => {
+        this.connectionFailed(e);
         this.checkError(e, true);
       });
   }
