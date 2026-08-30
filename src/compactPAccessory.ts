@@ -3,11 +3,18 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { DateTime, OperationMode, PauseOption, SystemWorkingMode, VentilationMode, WeekScheduleRecord } from './cts700Data';
 import { CTS700Modbus } from './cts700Modbus';
-import { CTS700TargetResolver, UserTargets, UserTarget } from './cts700TargetResolver';
+import {
+  CTS700TargetResolver,
+  CTS700TargetResolverSnapshot,
+  UserTargets,
+  UserTarget,
+} from './cts700TargetResolver';
 import type { NilanHomebridgePlatform } from './platform';
 
 type WriterParameter = boolean | number | PauseOption | VentilationMode;
 type ModbusFactory = (host: string, didConnect: () => void) => CTS700Modbus;
+const RESOLVER_CHECKPOINT_INTERVAL_MS = 5 * 60 * 1000;
+const RESOLVER_CONTEXT_KEY = 'targetResolverState';
 
 export class CompactPPlatformAccessory {
   private ventilationFanService: Service;
@@ -25,6 +32,9 @@ export class CompactPPlatformAccessory {
   private processedDateTime?: DateTime;
   private processedSchedule: WeekScheduleRecord | null = null;
   private readonly targetResolver = new CTS700TargetResolver();
+  private resolverRestoreAttempted = false;
+  private lastControllerDateTime?: DateTime;
+  private lastResolverCheckpoint = 0;
 
   constructor(
     private readonly platform: NilanHomebridgePlatform,
@@ -67,6 +77,9 @@ export class CompactPPlatformAccessory {
   }
 
   public shutdown(): void {
+    if (this.lastControllerDateTime !== undefined) {
+      this.persistTargetResolverState(this.lastControllerDateTime, true);
+    }
     clearInterval(this.updateInterval);
     this.cts700Modbus.close();
   }
@@ -281,6 +294,7 @@ export class CompactPPlatformAccessory {
     this.updateInProgress = true;
     try {
       const readings = await this.cts700Modbus.fetchReadings();
+      this.lastControllerDateTime = { ...readings.currentDateTime };
       this.platform.log.debug('Updating with readings:', readings);
 
       const c = platform.Characteristic;
@@ -323,14 +337,27 @@ export class CompactPPlatformAccessory {
           this.processedDateTime = normalizedDateTime;
         }
 
+        if (!this.resolverRestoreAttempted) {
+          const restored = this.targetResolver.restoreSnapshot(
+            this.accessory.context[RESOLVER_CONTEXT_KEY],
+            readings.currentDateTime,
+            this.processedSchedule,
+            userTargets,
+          );
+          this.platform.log.debug(restored ? 'Restored recent temperature overrides.' : 'No recent temperature overrides restored.');
+          this.resolverRestoreAttempted = true;
+        }
+
         displayedTargets = this.targetResolver.resolveAutomaticTargets(
           userTargets,
           this.processedSchedule,
         );
         this.platform.log.debug('Resolved automatic targets:', displayedTargets);
       } else {
+        this.resolverRestoreAttempted = true;
         displayedTargets = this.targetResolver.useUserTargets(userTargets);
       }
+      this.persistTargetResolverState(readings.currentDateTime);
 
       if (settings.paused === PauseOption.Ventilation || settings.paused === PauseOption.All) {
         this.ventilationThermostatService.updateCharacteristic(c.CurrentHeatingCoolingState, c.CurrentHeatingCoolingState.OFF);
@@ -430,9 +457,42 @@ export class CompactPPlatformAccessory {
   ): Promise<number | null> {
     return this.handleWrite(writer, value, name, (error) => {
       if (error === null) {
-        this.targetResolver.markUserOverride(target);
+        this.targetResolver.markUserOverride(target, value);
       }
       callback(error);
     });
+  }
+
+  private persistTargetResolverState(currentTime: DateTime, force = false): void {
+    const snapshot = this.targetResolver.createSnapshot(currentTime);
+    const existing = this.accessory.context[RESOLVER_CONTEXT_KEY] as unknown;
+
+    if (snapshot === undefined) {
+      if (existing !== undefined) {
+        delete this.accessory.context[RESOLVER_CONTEXT_KEY];
+        this.platform.api.updatePlatformAccessories([this.accessory]);
+      }
+      return;
+    }
+
+    const checkpointDue = Date.now() - this.lastResolverCheckpoint >= RESOLVER_CHECKPOINT_INTERVAL_MS;
+    if (!force && !checkpointDue && this.sameResolverState(existing, snapshot)) {
+      return;
+    }
+
+    this.accessory.context[RESOLVER_CONTEXT_KEY] = snapshot;
+    this.lastResolverCheckpoint = Date.now();
+    this.platform.api.updatePlatformAccessories([this.accessory]);
+  }
+
+  private sameResolverState(existing: unknown, snapshot: CTS700TargetResolverSnapshot): boolean {
+    if (typeof existing !== 'object' || existing === null) {
+      return false;
+    }
+    const existingState = { ...existing as CTS700TargetResolverSnapshot };
+    const snapshotState = { ...snapshot };
+    delete (existingState as Partial<CTS700TargetResolverSnapshot>).savedAt;
+    delete (snapshotState as Partial<CTS700TargetResolverSnapshot>).savedAt;
+    return isDeepStrictEqual(existingState, snapshotState);
   }
 }

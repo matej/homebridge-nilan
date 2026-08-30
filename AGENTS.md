@@ -75,6 +75,10 @@ to real hardware.
   UI, or another Modbus client. HomeKit fan speed reports inlet fan output as an
   effective value; never infer target ownership from it because automatic
   controller functions may alter it.
+- Known room and DHW overrides are checkpointed in accessory context while
+  active. Restore them only within the documented short expiry when controller
+  time, the complete schedule record, and user targets validate unchanged. Keep
+  the snapshot versioned and discard malformed or ambiguous cache data.
 - `npm run diagnose:cts700` is a read-only hardware observation tool. Keep real
   controller addresses and captured output out of commits.
 - `npm run audit:cts700` is a read-only settings inventory. It deliberately
